@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, username?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -29,6 +29,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
   const isConfigured = !!(supabaseUrl && !supabaseUrl.includes('your-project'));
 
+  // Auto-create a profile row when a new user signs up or logs in
+  const ensureProfile = useCallback(async (authUser: User) => {
+    if (!isConfigured || !authUser) return;
+
+    try {
+      // Check if profile exists
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authUser.id)
+        .single();
+
+      if (!data) {
+        // Create profile from email
+        const emailPrefix = authUser.email?.split('@')[0] || 'user';
+        const username = emailPrefix.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+        await supabase.from('profiles').insert({
+          id: authUser.id,
+          username: username + '_' + Math.random().toString(36).slice(2, 6),
+          full_name: emailPrefix,
+          bio: '',
+          avatar_url: '',
+        });
+      }
+    } catch (err) {
+      // Profile might already exist — ignore duplicate key errors
+      console.log('Profile check:', err);
+    }
+  }, [isConfigured]);
+
   useEffect(() => {
     if (!isConfigured) {
       setLoading(false);
@@ -39,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) ensureProfile(session.user);
       setLoading(false);
     });
 
@@ -46,18 +78,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) ensureProfile(session.user);
     });
 
     return () => subscription.unsubscribe();
-  }, [isConfigured]);
+  }, [isConfigured, ensureProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+  const signUp = useCallback(async (email: string, password: string, username?: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+
+    // If signup succeeded and we got a user, create their profile immediately
+    if (!error && data.user) {
+      const emailPrefix = email.split('@')[0] || 'user';
+      const profileUsername = username || emailPrefix.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+      try {
+        await supabase.from('profiles').insert({
+          id: data.user.id,
+          username: profileUsername,
+          full_name: emailPrefix,
+          bio: '',
+          avatar_url: '',
+        });
+      } catch (profileErr) {
+        console.log('Profile creation during signup:', profileErr);
+      }
+    }
+
     return { error };
   }, []);
 
