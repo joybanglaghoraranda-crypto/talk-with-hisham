@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, username?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, username?: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, username?: string) => {
+  const signUp = useCallback(async (email: string, password: string, username?: string, fullName?: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
 
     // If signup succeeded and we got a user, create their profile immediately
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase.from('profiles').insert({
           id: data.user.id,
           username: profileUsername,
-          full_name: emailPrefix,
+          full_name: fullName || emailPrefix,
           bio: '',
           avatar_url: '',
         });

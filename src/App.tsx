@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import FloatingCTA from './components/layout/FloatingCTA';
 import BackgroundParticles from './components/effects/BackgroundParticles';
 import Hero from './components/home/Hero';
 import About from './components/home/About';
@@ -58,6 +59,7 @@ const App: React.FC = () => {
         <AnimatedRoutes />
       </main>
 
+      <FloatingCTA />
       <Footer />
     </div>
   );
