@@ -100,7 +100,7 @@ const ProfileSettings: React.FC = () => {
 
     try {
       const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${user.id}/${Math.random()}.${fileExt}`;
 
       const publicUrl = await uploadFile('avatars', filePath, file);
       setProfile(prev => ({ ...prev, avatar_url: publicUrl }));
