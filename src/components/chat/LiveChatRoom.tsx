@@ -109,6 +109,8 @@ const LiveChatRoom: React.FC = () => {
     const messageContent = newMessage;
     setNewMessage(''); // Optimistic clear
 
+    const msgId = crypto.randomUUID();
+
     try {
       let imageUrl = null;
       if (imageFile) {
@@ -121,11 +123,25 @@ const LiveChatRoom: React.FC = () => {
         }
       }
 
+      // Optimistically update UI
+      setMessages(prev => [...prev, {
+        id: msgId,
+        sender_id: user.id,
+        content: messageContent,
+        created_at: new Date().toISOString(),
+        image_url: imageUrl || undefined,
+        profiles: {
+          username: user.email?.split('@')[0] || 'You',
+          avatar_url: '' 
+        }
+      }]);
+
       const { error } = await supabase.from('messages').insert([
-        { content: messageContent, sender_id: user.id, image_url: imageUrl }
+        { id: msgId, content: messageContent, sender_id: user.id, image_url: imageUrl }
       ]);
 
       if (error) {
+        setMessages(prev => prev.filter(m => m.id !== msgId)); // Revert
         console.error('Insert error:', error);
         setNewMessage(messageContent); // Restore on failure
         toast.error('Failed to send — ' + (error.message || 'unknown error'));
@@ -135,6 +151,7 @@ const LiveChatRoom: React.FC = () => {
       setImageFile(null);
       setImagePreview(null);
     } catch (err: any) {
+      setMessages(prev => prev.filter(m => m.id !== msgId)); // Revert
       console.error(err);
       setNewMessage(messageContent);
       toast.error('Failed to send message');
