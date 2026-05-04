@@ -72,14 +72,14 @@ const ProfileSettings: React.FC = () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
           username: profile.username,
           full_name: profile.full_name,
           bio: profile.bio,
           avatar_url: profile.avatar_url,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
+        });
 
       if (error) throw error;
       toast.success('Profile updated successfully!');

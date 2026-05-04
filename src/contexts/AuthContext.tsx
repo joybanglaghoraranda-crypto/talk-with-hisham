@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('id')
         .eq('id', authUser.id)
-        .single();
+        .maybeSingle();
 
       if (!data) {
         // Create profile from email
