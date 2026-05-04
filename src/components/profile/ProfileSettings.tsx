@@ -220,7 +220,7 @@ const ProfileSettings: React.FC = () => {
             <div className="flex items-center gap-3">
               <p className="text-xs text-white/40">Click to update avatar (max 2MB)</p>
               {profile.avatar_url && (
-                <button type="button" onClick={removeAvatar} className="text-rose-400/60 hover:text-rose-400 transition-colors">
+                <button type="button" onClick={removeAvatar} aria-label="Remove avatar" className="text-rose-400/60 hover:text-rose-400 transition-colors">
                   <Trash2 size={14} />
                 </button>
               )}

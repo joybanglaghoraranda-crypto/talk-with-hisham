@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAdmin: boolean;
   isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, username?: string, fullName?: string) => Promise<{ error: any }>;
@@ -28,6 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check if Supabase is properly configured
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
   const isConfigured = !!(supabaseUrl && !supabaseUrl.includes('your-project'));
+
+  const isAdmin = user?.email === 'ibnenurakondo@gmail.com';
 
   // Auto-create a profile row when a new user signs up or logs in
   const ensureProfile = useCallback(async (authUser: User) => {
@@ -120,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isConfigured, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isConfigured, isAdmin, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

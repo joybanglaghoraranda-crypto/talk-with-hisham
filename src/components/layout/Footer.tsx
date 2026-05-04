@@ -159,7 +159,7 @@ const PrivateMessageModal: React.FC<{ isOpen: boolean; onClose: () => void }> = 
             className="relative bg-neutral-950 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white">
+            <button onClick={onClose} aria-label="Close modal" className="absolute top-4 right-4 text-white/30 hover:text-white">
               <X size={20} />
             </button>
 

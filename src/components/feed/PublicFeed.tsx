@@ -25,7 +25,7 @@ interface Post {
 }
 
 const PublicFeed: React.FC = () => {
-  const { user, isConfigured } = useAuth();
+  const { user, isConfigured, isAdmin } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [newPostContent, setNewPostContent] = useState('');
@@ -75,8 +75,8 @@ const PublicFeed: React.FC = () => {
   const handlePost = async () => {
     if (!newPostContent.trim() && !imageFile) return;
 
-    if (!user) {
-      toast.error('Please sign in to post');
+    if (!isAdmin) {
+      toast.error('Only Hisham is allowed to create posts.');
       return;
     }
 
@@ -223,7 +223,7 @@ const PublicFeed: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       {/* Create Post */}
-      {user && (
+      {isAdmin && (
         <GlassWrapper className="p-5 border-orange-500/10">
           <div className="flex gap-4">
             <Avatar className="w-11 h-11 border border-white/10 shadow-lg flex-shrink-0">
@@ -241,9 +241,10 @@ const PublicFeed: React.FC = () => {
               />
               {imagePreview && (
                 <div className="relative group inline-block">
-                  <img src={imagePreview} className="max-h-48 rounded-xl border border-white/10 shadow-xl" />
+                  <img src={imagePreview} alt="Image preview" className="max-h-48 rounded-xl border border-white/10 shadow-xl" />
                   <button
                     onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    aria-label="Remove image preview"
                     className="absolute top-2 right-2 bg-black/60 hover:bg-rose-500 p-1.5 rounded-full backdrop-blur-md transition-all"
                   >
                     <X size={12} />
@@ -255,7 +256,7 @@ const PublicFeed: React.FC = () => {
                   <div className="p-2 rounded-lg bg-white/5 group-hover:bg-orange-500/10 transition-colors">
                     <ImageIcon size={16} />
                   </div>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
+                  <input type="file" aria-label="Upload image" className="hidden" accept="image/*" onChange={handleImageSelect} />
                 </label>
                 <Button
                   onClick={handlePost}
@@ -271,9 +272,11 @@ const PublicFeed: React.FC = () => {
         </GlassWrapper>
       )}
 
-      {!user && (
+      {!isAdmin && (
         <GlassWrapper className="p-6 border-orange-500/10 text-center">
-          <p className="text-white/50 text-sm">Sign in to share your opinions and join the conversation.</p>
+          <p className="text-white/50 text-sm">
+            {user ? "Enjoy the feed! Only Hisham can create new posts, but you can reply to them below." : "Sign in to join the conversation and interact with the feed."}
+          </p>
         </GlassWrapper>
       )}
 

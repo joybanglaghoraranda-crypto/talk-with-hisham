@@ -54,8 +54,10 @@ ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Posts are viewable by everyone." 
   ON posts FOR SELECT USING (true);
 
-CREATE POLICY "Authenticated users can create posts." 
-  ON posts FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Only admin can create posts." 
+  ON posts FOR INSERT WITH CHECK (
+    (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+  );
 
 CREATE POLICY "Users can delete own posts." 
   ON posts FOR DELETE USING (auth.uid() = author_id);

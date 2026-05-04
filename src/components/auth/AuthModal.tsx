@@ -108,6 +108,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 {/* Close button */}
                 <button
                   onClick={onClose}
+                  aria-label="Close modal"
                   className="absolute top-5 right-5 text-white/30 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
                 >
                   <X size={18} />
@@ -235,6 +236,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -271,6 +273,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                             <button
                               type="button"
                               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                             >
                               {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}

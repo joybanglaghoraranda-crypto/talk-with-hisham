@@ -281,9 +281,10 @@ const LiveChatRoom: React.FC = () => {
           <div className="px-4 py-3 bg-black/30 border-t border-white/10 space-y-2">
             {imagePreview && (
               <div className="relative inline-block">
-                <img src={imagePreview} className="h-16 w-auto max-w-[160px] object-cover rounded-lg border border-white/20 shadow-lg" />
+                <img src={imagePreview} alt="Image preview" className="h-16 w-auto max-w-[160px] object-cover rounded-lg border border-white/20 shadow-lg" />
                 <button
                   onClick={() => { setImageFile(null); setImagePreview(null); }}
+                  aria-label="Remove image preview"
                   className="absolute -top-1.5 -right-1.5 bg-rose-500 rounded-full p-0.5 shadow-lg hover:scale-110 transition-transform"
                 >
                   <X size={10} className="text-white" />
@@ -300,7 +301,7 @@ const LiveChatRoom: React.FC = () => {
             <form onSubmit={sendMessage} className="flex gap-2">
               <label className="cursor-pointer bg-white/5 hover:bg-white/10 p-2.5 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 group border border-white/5">
                 <ImageIcon size={18} className="text-white/40 group-hover:text-orange-400" />
-                <input type="file" className="hidden" accept="image/*" onChange={handleImageSelect} />
+                <input type="file" aria-label="Upload image" className="hidden" accept="image/*" onChange={handleImageSelect} />
               </label>
               <Input
                 value={newMessage}
