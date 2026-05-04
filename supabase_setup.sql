@@ -27,6 +27,7 @@ CREATE TABLE messages (
   sender_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   content TEXT,
   image_url TEXT,
+  reactions JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -70,6 +71,9 @@ CREATE POLICY "Messages are viewable by everyone."
 
 CREATE POLICY "Authenticated users can send messages." 
   ON messages FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can update message reactions." 
+  ON messages FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- STORAGE POLICIES (for bucket 'avatars' and 'media')
 -- Allow public read access

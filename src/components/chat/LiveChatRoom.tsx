@@ -16,11 +16,14 @@ interface Message {
   content: string;
   created_at: string;
   image_url?: string;
+  reactions?: Record<string, string[]>;
   profiles?: {
     username: string;
     avatar_url: string;
   };
 }
+
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
 
 const LiveChatRoom: React.FC = () => {
   const { user, isConfigured } = useAuth();
@@ -39,22 +42,27 @@ const LiveChatRoom: React.FC = () => {
       .channel('public_chat')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
+        { event: '*', schema: 'public', table: 'messages' },
         async (payload) => {
-          const newMsg = payload.new as Message;
-          // Fetch profile for the new message
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('username, avatar_url')
-            .eq('id', newMsg.sender_id)
-            .single();
+          if (payload.eventType === 'INSERT') {
+            const newMsg = payload.new as Message;
+            // Fetch profile for the new message
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('id', newMsg.sender_id)
+              .single();
 
-          newMsg.profiles = profile || { username: 'Anonymous', avatar_url: '' };
-          setMessages((prev) => {
-            // Avoid duplicates
-            if (prev.find(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
+            newMsg.profiles = profile || { username: 'Anonymous', avatar_url: '' };
+            setMessages((prev) => {
+              // Avoid duplicates
+              if (prev.find(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedMsg = payload.new as Message;
+            setMessages(prev => prev.map(m => m.id === updatedMsg.id ? { ...m, reactions: updatedMsg.reactions } : m));
+          }
         }
       )
       .subscribe();
@@ -93,6 +101,41 @@ const LiveChatRoom: React.FC = () => {
       }
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleReact = async (messageId: string, emoji: string) => {
+    if (!user) {
+      toast.error('Please sign in to react');
+      return;
+    }
+
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg) return;
+
+    const currentReactions = msg.reactions || {};
+    const hasReacted = currentReactions[emoji]?.includes(user.id);
+    const newReactions = { ...currentReactions };
+    
+    // Remove user's reaction from all emojis to ensure 1 react per message
+    Object.keys(newReactions).forEach(key => {
+      newReactions[key] = newReactions[key].filter(id => id !== user.id);
+      if (newReactions[key].length === 0) delete newReactions[key];
+    });
+
+    if (!hasReacted) {
+      newReactions[emoji] = [...(newReactions[emoji] || []), user.id];
+    }
+
+    // Optimistic UI
+    setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reactions: newReactions } : m));
+
+    if (isConfigured) {
+      try {
+        await supabase.from('messages').update({ reactions: newReactions }).eq('id', messageId);
+      } catch (err) {
+        console.error('Reaction failed:', err);
+      }
     }
   };
 
@@ -271,20 +314,54 @@ const LiveChatRoom: React.FC = () => {
                             {formatTime(msg.created_at)}
                           </span>
                         </div>
-                        {msg.content && (
-                          <div className={`text-white/85 text-sm leading-relaxed p-3 ${
-                            isOwn
-                              ? 'bg-orange-500/15 rounded-2xl rounded-tr-sm border border-orange-500/10'
-                              : 'bg-white/5 rounded-2xl rounded-tl-sm border border-white/5'
-                          }`}>
-                            {msg.content}
-                          </div>
-                        )}
-                        {msg.image_url && (
-                          <div className="mt-1 rounded-xl overflow-hidden border border-white/10 max-w-xs shadow-xl">
-                            <img src={msg.image_url} alt="Shared" className="w-full h-auto object-cover max-h-64" />
-                          </div>
-                        )}
+                        <div className={`relative group inline-flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                          {user && (
+                            <div className={`absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-neutral-900 border border-white/10 rounded-full shadow-xl px-2 py-1.5 flex gap-1 z-10 ${
+                              isOwn ? 'right-0' : 'left-0'
+                            }`}>
+                              {REACTION_EMOJIS.map(emoji => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => handleReact(msg.id, emoji)}
+                                  className="hover:scale-125 transition-transform text-lg"
+                                  title={`React with ${emoji}`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {msg.content && (
+                            <div className={`text-white/85 text-sm leading-relaxed p-3 ${
+                              isOwn
+                                ? 'bg-orange-500/15 rounded-2xl rounded-tr-sm border border-orange-500/10 text-left'
+                                : 'bg-white/5 rounded-2xl rounded-tl-sm border border-white/5'
+                            }`}>
+                              {msg.content}
+                            </div>
+                          )}
+                          {msg.image_url && (
+                            <div className="mt-1 rounded-xl overflow-hidden border border-white/10 max-w-xs shadow-xl">
+                              <img src={msg.image_url} alt="Shared" className="w-full h-auto object-cover max-h-64" />
+                            </div>
+                          )}
+
+                          {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                            <div className={`absolute -bottom-3 flex items-center gap-1 bg-neutral-900 border border-white/10 rounded-full px-2 py-0.5 shadow-sm text-[10px] z-10 ${
+                              isOwn ? 'right-2' : 'left-2'
+                            }`}>
+                              <span className="flex">
+                                {Object.keys(msg.reactions).map((emoji, i) => (
+                                  <span key={emoji} className={i > 0 ? '-ml-1' : ''}>{emoji}</span>
+                                ))}
+                              </span>
+                              <span className="text-white/60 font-medium ml-1">
+                                {Object.values(msg.reactions).reduce((sum, arr) => sum + arr.length, 0)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   );
