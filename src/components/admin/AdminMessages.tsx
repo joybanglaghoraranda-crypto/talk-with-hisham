@@ -64,16 +64,46 @@ const AdminMessages: React.FC = () => {
 
     setReplying(id);
     try {
-      const { error } = await supabase
+      // First verify we can select this message (RLS check)
+      const { data: existing, error: selectError } = await supabase
+        .from('private_messages')
+        .select('id')
+        .eq('id', id)
+        .single();
+
+      if (selectError) {
+        console.error('SELECT check failed:', selectError);
+        toast.error('Cannot access this message. Check RLS policies.');
+        return;
+      }
+
+      const { data, error } = await supabase
         .from('private_messages')
         .update({
           admin_reply: text,
           admin_reply_at: new Date().toISOString(),
           read: true
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('UPDATE error details:', error.message, error.details, error.hint, error.code);
+        if (error.message?.includes('column')) {
+          toast.error('Database columns missing. Run schema_update.sql in Supabase.');
+        } else if (error.code === '42501') {
+          toast.error('Permission denied. Check UPDATE RLS policy.');
+        } else {
+          toast.error(`Failed: ${error.message}`);
+        }
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('Update returned no rows — RLS may be blocking the UPDATE');
+        toast.error('Reply not saved. Ensure UPDATE policy exists for admin on private_messages.');
+        return;
+      }
 
       setMessages(prev => prev.map(m =>
         m.id === id
@@ -82,9 +112,9 @@ const AdminMessages: React.FC = () => {
       ));
       setReplyTexts(prev => ({ ...prev, [id]: '' }));
       toast.success('Reply sent!');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to send reply');
+    } catch (err: any) {
+      console.error('Unexpected error sending reply:', err);
+      toast.error(err?.message || 'Failed to send reply');
     } finally {
       setReplying(null);
     }
