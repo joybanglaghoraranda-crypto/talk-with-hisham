@@ -82,7 +82,7 @@ const App: React.FC = () => {
     <div className="relative min-h-screen bg-neutral-950 text-white overflow-x-hidden font-sans">
       {/* Background with Profile Pic & Particles */}
       <div
-        className="fixed inset-0 z-0 bg-cover bg-center grayscale-[0.2] opacity-40 transition-all duration-1000 bg-[url('/images/hisham.png')]"
+        className="fixed inset-0 z-0 bg-cover bg-center grayscale-[0.1] opacity-35 transition-all duration-1000 bg-[url('/images/hisham-backgroud.png')]"
       />
       <BackgroundParticles />
       <div className="fixed inset-0 z-0 bg-gradient-to-b from-black/60 via-transparent to-black/80" />
