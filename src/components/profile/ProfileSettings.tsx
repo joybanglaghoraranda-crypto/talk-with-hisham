@@ -70,21 +70,61 @@ const ProfileSettings: React.FC = () => {
 
     setUpdating(true);
     try {
-      const { error } = await supabase
+      // First try to update existing profile
+      const { data: existing, error: checkError } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          username: profile.username,
-          full_name: profile.full_name,
-          bio: profile.bio,
-          avatar_url: profile.avatar_url,
-          updated_at: new Date().toISOString(),
-        });
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (checkError) {
+        console.error('Profile check error:', checkError);
+      }
+
+      let error;
+      if (existing) {
+        // Profile exists — update it
+        const result = await supabase
+          .from('profiles')
+          .update({
+            username: profile.username,
+            full_name: profile.full_name,
+            bio: profile.bio,
+            avatar_url: profile.avatar_url,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+        error = result.error;
+      } else {
+        // Profile doesn't exist — insert it
+        const result = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            username: profile.username,
+            full_name: profile.full_name,
+            bio: profile.bio,
+            avatar_url: profile.avatar_url,
+            updated_at: new Date().toISOString(),
+          });
+        error = result.error;
+      }
+
+      if (error) {
+        console.error('Profile save error:', error.message, error.details, error.hint, error.code);
+        if (error.code === '23505') {
+          toast.error('Username already taken. Please choose a different one.');
+        } else if (error.code === '42501') {
+          toast.error('Permission denied. Check profiles RLS policies in Supabase.');
+        } else {
+          toast.error(error.message || 'Failed to update profile');
+        }
+        return;
+      }
+
       toast.success('Profile updated successfully!');
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('Unexpected error updating profile:', error);
       toast.error(error.message || 'Failed to update profile');
     } finally {
       setUpdating(false);

@@ -146,9 +146,11 @@
 }
 
 /* Firefox scrollbar */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+@supports (scrollbar-width: thin) {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
 }
 
 /* Hover scale utility for reactions */

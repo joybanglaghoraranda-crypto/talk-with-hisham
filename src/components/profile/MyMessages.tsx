@@ -17,7 +17,7 @@ interface MyMessage {
 }
 
 const MyMessages: React.FC = () => {
-  const { user, isConfigured } = useAuth();
+  const { user, isConfigured, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<MyMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +134,8 @@ const MyMessages: React.FC = () => {
         </Button>
       </div>
 
-      {/* Compose New Message CTA */}
+      {/* Compose New Message CTA — only for regular users, not admin */}
+      {!isAdmin && (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -220,6 +221,7 @@ const MyMessages: React.FC = () => {
           )}
         </AnimatePresence>
       </motion.div>
+      )}
 
       {/* Messages List */}
       {messages.length === 0 ? (
