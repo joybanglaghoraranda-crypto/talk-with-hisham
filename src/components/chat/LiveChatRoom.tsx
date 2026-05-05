@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, uploadFile } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Hash, Users, Shield, Image as ImageIcon, X, Smile } from 'lucide-react';
+import { Send, Hash, Users, Shield, Image as ImageIcon, X, Smile, Reply, CornerDownRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import GlassWrapper from '../layout/GlassWrapper';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { ScrollArea } from '../ui/scroll-area';
 
 interface Message {
   id: string;
@@ -17,6 +15,7 @@ interface Message {
   created_at: string;
   image_url?: string;
   reactions?: Record<string, string[]>;
+  reply_to?: string | null;
   profiles?: {
     username: string;
     avatar_url: string;
@@ -32,12 +31,15 @@ const LiveChatRoom: React.FC = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [showReactionsFor, setShowReactionsFor] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isConfigured) return;
 
-    // Realtime subscription
     const channel = supabase
       .channel('public_chat')
       .on(
@@ -46,7 +48,6 @@ const LiveChatRoom: React.FC = () => {
         async (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new as Message;
-            // Fetch profile for the new message
             const { data: profile } = await supabase
               .from('profiles')
               .select('username, avatar_url')
@@ -55,7 +56,6 @@ const LiveChatRoom: React.FC = () => {
 
             newMsg.profiles = profile || { username: 'Anonymous', avatar_url: '' };
             setMessages((prev) => {
-              // Avoid duplicates
               if (prev.find(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
@@ -80,7 +80,7 @@ const LiveChatRoom: React.FC = () => {
         .from('messages')
         .select('*, profiles(username, avatar_url)')
         .order('created_at', { ascending: true })
-        .limit(100);
+        .limit(200);
 
       if (error) {
         console.error('Fetch error:', error);
@@ -116,8 +116,8 @@ const LiveChatRoom: React.FC = () => {
     const currentReactions = msg.reactions || {};
     const hasReacted = currentReactions[emoji]?.includes(user.id);
     const newReactions = { ...currentReactions };
-    
-    // Remove user's reaction from all emojis to ensure 1 react per message
+
+    // Remove user's reaction from all emojis
     Object.keys(newReactions).forEach(key => {
       newReactions[key] = newReactions[key].filter(id => id !== user.id);
       if (newReactions[key].length === 0) delete newReactions[key];
@@ -129,6 +129,7 @@ const LiveChatRoom: React.FC = () => {
 
     // Optimistic UI
     setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reactions: newReactions } : m));
+    setShowReactionsFor(null);
 
     if (isConfigured) {
       try {
@@ -138,6 +139,11 @@ const LiveChatRoom: React.FC = () => {
       }
     }
   };
+
+  const handleReply = useCallback((msg: Message) => {
+    setReplyTo(msg);
+    inputRef.current?.focus();
+  }, []);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,7 +156,9 @@ const LiveChatRoom: React.FC = () => {
 
     setSending(true);
     const messageContent = newMessage;
-    setNewMessage(''); // Optimistic clear
+    const replyToId = replyTo?.id || null;
+    setNewMessage('');
+    setReplyTo(null);
 
     const msgId = crypto.randomUUID();
 
@@ -173,20 +181,21 @@ const LiveChatRoom: React.FC = () => {
         content: messageContent,
         created_at: new Date().toISOString(),
         image_url: imageUrl || undefined,
+        reply_to: replyToId,
         profiles: {
           username: user.email?.split('@')[0] || 'You',
-          avatar_url: '' 
+          avatar_url: ''
         }
       }]);
 
       const { error } = await supabase.from('messages').insert([
-        { id: msgId, content: messageContent, sender_id: user.id, image_url: imageUrl }
+        { id: msgId, content: messageContent, sender_id: user.id, image_url: imageUrl, reply_to: replyToId }
       ]);
 
       if (error) {
-        setMessages(prev => prev.filter(m => m.id !== msgId)); // Revert
+        setMessages(prev => prev.filter(m => m.id !== msgId));
         console.error('Insert error:', error);
-        setNewMessage(messageContent); // Restore on failure
+        setNewMessage(messageContent);
         toast.error('Failed to send — ' + (error.message || 'unknown error'));
         return;
       }
@@ -194,7 +203,7 @@ const LiveChatRoom: React.FC = () => {
       setImageFile(null);
       setImagePreview(null);
     } catch (err: any) {
-      setMessages(prev => prev.filter(m => m.id !== msgId)); // Revert
+      setMessages(prev => prev.filter(m => m.id !== msgId));
       console.error(err);
       setNewMessage(messageContent);
       toast.error('Failed to send message');
@@ -204,8 +213,8 @@ const LiveChatRoom: React.FC = () => {
   };
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
@@ -217,225 +226,302 @@ const LiveChatRoom: React.FC = () => {
 
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+    // Show time for today
+    const isToday = date.toDateString() === now.toDateString();
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    // Show date + time for older
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+      ' ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
+
+  // Group messages by date
+  const getDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  const getReplyMessage = (replyId: string | null | undefined) => {
+    if (!replyId) return null;
+    return messages.find(m => m.id === replyId) || null;
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[78vh]">
-      {/* Sidebar */}
-      <div className="hidden lg:flex flex-col gap-4 col-span-1">
-        <GlassWrapper className="flex-1 flex flex-col p-5 bg-black/40">
-          <div className="flex items-center gap-2 mb-6 px-1">
-            <Users className="text-orange-400" size={18} />
-            <h3 className="font-bold uppercase tracking-widest text-[10px] text-white/40">Online</h3>
+    <div className="flex flex-col h-[calc(100vh-7rem)] max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex-shrink-0 flex items-center justify-between bg-black/40 backdrop-blur-xl border border-white/10 rounded-t-2xl px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/30 to-rose-500/30 flex items-center justify-center text-orange-400 border border-orange-500/20">
+            <Hash size={18} />
           </div>
-          <div className="flex flex-col gap-2">
-            <UserEntry name="Hisham" status="online" isAdmin />
-            {user && <UserEntry name={user.email?.split('@')[0] || 'You'} status="online" />}
-          </div>
-
-          <div className="mt-auto pt-6 border-t border-white/10">
-            <div className="bg-gradient-to-br from-orange-500/10 to-rose-500/10 rounded-xl p-4 border border-white/5">
-              <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold mb-2">Room Info</p>
-              <p className="text-xs text-white/50 leading-relaxed">
-                This is a public room. Be respectful, thoughtful, and open-minded.
-              </p>
+          <div>
+            <h2 className="font-bold text-white text-sm">General Debate</h2>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-[10px] text-white/40 uppercase tracking-wider font-medium">Live • {messages.length} messages</p>
             </div>
           </div>
-        </GlassWrapper>
+        </div>
+        <div className="flex items-center gap-2 text-white/30">
+          <Users size={16} />
+          <span className="text-xs">{user ? '2+' : '1'} online</span>
+        </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="col-span-1 lg:col-span-3">
-        <GlassWrapper className="h-full flex flex-col p-0 overflow-hidden bg-black/30 border-white/5">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/5 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/30 to-rose-500/30 flex items-center justify-center text-orange-400 border border-orange-500/20">
-                <Hash size={18} />
-              </div>
-              <div>
-                <h2 className="font-bold text-white">General Debate</h2>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  <p className="text-[10px] text-white/40 uppercase tracking-wider font-medium">Live • {messages.length} messages</p>
-                </div>
-              </div>
-            </div>
+      {/* Messages Area */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-black/20 backdrop-blur-md border-x border-white/10 custom-scrollbar"
+      >
+        {/* Welcome Note */}
+        <div className="bg-gradient-to-r from-orange-500/8 to-rose-500/8 border border-white/5 rounded-2xl p-5 mb-4 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Hash size={32} />
           </div>
+          <h3 className="text-base font-bold mb-1 text-orange-400">Welcome to General Debate</h3>
+          <p className="text-white/40 text-xs leading-relaxed max-w-lg">
+            Share your insights, respect the discourse, and explore new perspectives together.
+          </p>
+        </div>
 
-          {/* Messages Area */}
-          <ScrollArea className="flex-1 px-6 py-4">
-            <div className="space-y-4">
-              {/* Welcome Note */}
-              <div className="bg-gradient-to-r from-orange-500/8 to-rose-500/8 border border-white/5 rounded-2xl p-6 mb-6 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <Hash size={40} />
-                </div>
-                <h3 className="text-lg font-bold mb-1 text-orange-400">Welcome to General Debate</h3>
-                <p className="text-white/40 text-sm leading-relaxed max-w-lg">
-                  Share your insights, respect the discourse, and explore new perspectives together.
-                </p>
-              </div>
-
-              {messages.length === 0 && (
-                <div className="text-center py-16 space-y-3">
-                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto border border-white/10">
-                    <Smile className="text-white/20" size={28} />
-                  </div>
-                  <p className="text-white/25 italic text-sm">Be the first to start the debate.</p>
-                </div>
-              )}
-
-              <AnimatePresence initial={false}>
-                {messages.map((msg, idx) => {
-                  const isOwn = user && msg.sender_id === user.id;
-                  return (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
-                    >
-                      <Avatar className="w-9 h-9 border border-white/10 shadow-md flex-shrink-0">
-                        <AvatarImage src={msg.profiles?.avatar_url} />
-                        <AvatarFallback className="bg-neutral-800 text-xs text-orange-300">
-                          {msg.profiles?.username?.[0]?.toUpperCase() ?? 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className={`space-y-1 max-w-[75%] ${isOwn ? 'items-end' : ''}`}>
-                        <div className={`flex items-center gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
-                          <span className="font-semibold text-xs text-orange-200/80">
-                            {isOwn ? 'You' : (msg.profiles?.username ?? 'Anonymous')}
-                          </span>
-                          <span className="text-[10px] text-white/20">
-                            {formatTime(msg.created_at)}
-                          </span>
-                        </div>
-                        <div className={`relative group inline-flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
-                          {user && (
-                            <div className={`absolute -top-10 opacity-0 group-hover:opacity-100 transition-all bg-neutral-900 border border-white/10 rounded-full shadow-xl px-2 py-1.5 flex gap-1 z-10 ${
-                              isOwn ? 'right-0' : 'left-0'
-                            }`}>
-                              {REACTION_EMOJIS.map(emoji => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => handleReact(msg.id, emoji)}
-                                  className="hover:scale-125 transition-transform text-lg"
-                                  title={`React with ${emoji}`}
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {msg.content && (
-                            <div className={`text-white/85 text-sm leading-relaxed p-3 ${
-                              isOwn
-                                ? 'bg-orange-500/15 rounded-2xl rounded-tr-sm border border-orange-500/10 text-left'
-                                : 'bg-white/5 rounded-2xl rounded-tl-sm border border-white/5'
-                            }`}>
-                              {msg.content}
-                            </div>
-                          )}
-                          {msg.image_url && (
-                            <div className="mt-1 rounded-xl overflow-hidden border border-white/10 max-w-xs shadow-xl">
-                              <img src={msg.image_url} alt="Shared" className="w-full h-auto object-cover max-h-64" />
-                            </div>
-                          )}
-
-                          {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                            <div className={`absolute -bottom-3 flex items-center gap-1 bg-neutral-900 border border-white/10 rounded-full px-2 py-0.5 shadow-sm text-[10px] z-10 ${
-                              isOwn ? 'right-2' : 'left-2'
-                            }`}>
-                              <span className="flex">
-                                {Object.keys(msg.reactions).map((emoji, i) => (
-                                  <span key={emoji} className={i > 0 ? '-ml-1' : ''}>{emoji}</span>
-                                ))}
-                              </span>
-                              <span className="text-white/60 font-medium ml-1">
-                                {Object.values(msg.reactions).reduce((sum, arr) => sum + arr.length, 0)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-              <div ref={scrollRef} />
+        {messages.length === 0 && (
+          <div className="text-center py-16 space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mx-auto border border-white/10">
+              <Smile className="text-white/20" size={24} />
             </div>
-          </ScrollArea>
+            <p className="text-white/25 italic text-sm">Be the first to start the debate.</p>
+          </div>
+        )}
 
-          {/* Input Area */}
-          <div className="px-4 py-3 bg-black/30 border-t border-white/10 space-y-2">
-            {imagePreview && (
-              <div className="relative inline-block">
-                <img src={imagePreview} alt="Image preview" className="h-16 w-auto max-w-[160px] object-cover rounded-lg border border-white/20 shadow-lg" />
-                <button
-                  onClick={() => { setImageFile(null); setImagePreview(null); }}
-                  aria-label="Remove image preview"
-                  className="absolute -top-1.5 -right-1.5 bg-rose-500 rounded-full p-0.5 shadow-lg hover:scale-110 transition-transform"
+        <AnimatePresence initial={false}>
+          {messages.map((msg, idx) => {
+            const isOwn = user && msg.sender_id === user.id;
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const showDateSep = !prevMsg || getDateLabel(msg.created_at) !== getDateLabel(prevMsg.created_at);
+            const repliedMsg = getReplyMessage(msg.reply_to);
+
+            return (
+              <React.Fragment key={msg.id}>
+                {/* Date Separator */}
+                {showDateSep && (
+                  <div className="flex items-center justify-center py-3">
+                    <div className="bg-white/10 backdrop-blur-sm px-4 py-1 rounded-full border border-white/5">
+                      <span className="text-[10px] text-white/40 font-semibold uppercase tracking-wider">
+                        {getDateLabel(msg.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className={`flex gap-2.5 group relative py-1 ${isOwn ? 'flex-row-reverse' : ''}`}
+                  onMouseLeave={() => setShowReactionsFor(null)}
                 >
-                  <X size={10} className="text-white" />
+                  <Avatar className="w-8 h-8 border border-white/10 shadow-md flex-shrink-0 mt-1">
+                    <AvatarImage src={msg.profiles?.avatar_url} />
+                    <AvatarFallback className="bg-neutral-800 text-[10px] text-orange-300">
+                      {msg.profiles?.username?.[0]?.toUpperCase() ?? 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className={`space-y-0.5 max-w-[70%] ${isOwn ? 'items-end' : ''}`}>
+                    {/* Name & Time */}
+                    <div className={`flex items-center gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                      <span className="font-semibold text-[11px] text-orange-200/80">
+                        {isOwn ? 'You' : (msg.profiles?.username ?? 'Anonymous')}
+                      </span>
+                      <span className="text-[9px] text-white/20">{formatTime(msg.created_at)}</span>
+                    </div>
+
+                    <div className={`relative inline-flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                      {/* Action Buttons (React + Reply) */}
+                      <div className={`absolute -top-8 opacity-0 group-hover:opacity-100 transition-all z-20 flex items-center gap-0.5 ${
+                        isOwn ? 'right-0' : 'left-0'
+                      }`}>
+                        {user && (
+                          <>
+                            <button
+                              onClick={() => setShowReactionsFor(showReactionsFor === msg.id ? null : msg.id)}
+                              className="bg-neutral-900 border border-white/10 rounded-lg p-1.5 hover:bg-white/10 transition-colors shadow-xl"
+                              title="React"
+                            >
+                              <Smile size={14} className="text-white/50" />
+                            </button>
+                            <button
+                              onClick={() => handleReply(msg)}
+                              className="bg-neutral-900 border border-white/10 rounded-lg p-1.5 hover:bg-white/10 transition-colors shadow-xl"
+                              title="Reply"
+                            >
+                              <Reply size={14} className="text-white/50" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Reaction Picker Popup */}
+                      <AnimatePresence>
+                        {showReactionsFor === msg.id && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                            className={`absolute -top-16 z-30 bg-neutral-900 border border-white/10 rounded-full shadow-2xl px-2 py-1.5 flex gap-1 ${
+                              isOwn ? 'right-0' : 'left-0'
+                            }`}
+                          >
+                            {REACTION_EMOJIS.map(emoji => (
+                              <button
+                                key={emoji}
+                                onClick={() => handleReact(msg.id, emoji)}
+                                className="hover:scale-130 transition-transform text-lg p-0.5 hover:bg-white/10 rounded-md"
+                                title={`React with ${emoji}`}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Reply Reference */}
+                      {repliedMsg && (
+                        <div className={`flex items-start gap-1.5 px-3 py-1.5 bg-white/5 border-l-2 border-orange-500/40 rounded-lg text-[11px] text-white/40 mb-1 max-w-full ${isOwn ? 'ml-auto' : ''}`}>
+                          <CornerDownRight size={10} className="mt-0.5 flex-shrink-0 text-orange-400/40" />
+                          <div className="min-w-0">
+                            <span className="text-orange-400/60 font-semibold">{repliedMsg.profiles?.username || 'User'}</span>
+                            <p className="truncate">{repliedMsg.content || '📷 Image'}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Message Content */}
+                      {msg.content && (
+                        <div className={`text-white/85 text-sm leading-relaxed p-3 ${
+                          isOwn
+                            ? 'bg-orange-500/15 rounded-2xl rounded-tr-sm border border-orange-500/10 text-left'
+                            : 'bg-white/5 rounded-2xl rounded-tl-sm border border-white/5'
+                        }`}>
+                          {msg.content}
+                        </div>
+                      )}
+
+                      {/* Image */}
+                      {msg.image_url && (
+                        <div className="mt-1 rounded-xl overflow-hidden border border-white/10 max-w-xs shadow-xl">
+                          <img src={msg.image_url} alt="Shared" className="w-full h-auto object-cover max-h-64" />
+                        </div>
+                      )}
+
+                      {/* Reactions Display */}
+                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : ''}`}>
+                          {Object.entries(msg.reactions).map(([emoji, userIds]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleReact(msg.id, emoji)}
+                              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all hover:scale-105 ${
+                                userIds.includes(user?.id || '')
+                                  ? 'bg-orange-500/15 border-orange-500/30 text-orange-300'
+                                  : 'bg-neutral-900 border-white/10 text-white/60'
+                              }`}
+                            >
+                              <span>{emoji}</span>
+                              <span className="font-medium text-[10px]">{userIds.length}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              </React.Fragment>
+            );
+          })}
+        </AnimatePresence>
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <div className="flex-shrink-0 bg-black/40 backdrop-blur-xl border border-white/10 border-t-0 rounded-b-2xl px-4 py-3 space-y-2">
+        {/* Reply Preview */}
+        <AnimatePresence>
+          {replyTo && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center gap-2 bg-white/5 border-l-2 border-orange-500 rounded-lg px-3 py-2 mb-2">
+                <Reply size={12} className="text-orange-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-orange-400 font-semibold">Replying to {replyTo.profiles?.username || 'User'}</p>
+                  <p className="text-xs text-white/40 truncate">{replyTo.content || '📷 Image'}</p>
+                </div>
+                <button onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="text-white/30 hover:text-white p-0.5">
+                  <X size={14} />
                 </button>
               </div>
-            )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            {!user && (
-              <p className="text-center text-xs text-orange-400/60 py-1">
-                Sign in to join the conversation
-              </p>
-            )}
-
-            <form onSubmit={sendMessage} className="flex gap-2">
-              <label className="cursor-pointer bg-white/5 hover:bg-white/10 p-2.5 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 group border border-white/5">
-                <ImageIcon size={18} className="text-white/40 group-hover:text-orange-400" />
-                <input type="file" aria-label="Upload image" className="hidden" accept="image/*" onChange={handleImageSelect} />
-              </label>
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={user ? "Type your argument..." : "Sign in to chat..."}
-                disabled={!user}
-                className="bg-white/5 border-white/5 focus-visible:ring-orange-500 focus-visible:border-orange-500/30 h-11 rounded-xl"
-              />
-              <Button
-                type="submit"
-                disabled={sending || !user}
-                className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold h-11 px-5 rounded-xl shadow-lg shadow-orange-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-30"
-              >
-                <Send size={16} />
-              </Button>
-            </form>
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="relative inline-block">
+            <img src={imagePreview} alt="Image preview" className="h-16 w-auto max-w-[160px] object-cover rounded-lg border border-white/20 shadow-lg" />
+            <button
+              onClick={() => { setImageFile(null); setImagePreview(null); }}
+              aria-label="Remove image preview"
+              className="absolute -top-1.5 -right-1.5 bg-rose-500 rounded-full p-0.5 shadow-lg hover:scale-110 transition-transform"
+            >
+              <X size={10} className="text-white" />
+            </button>
           </div>
-        </GlassWrapper>
+        )}
+
+        {!user && (
+          <p className="text-center text-xs text-orange-400/60 py-1">
+            Sign in to join the conversation
+          </p>
+        )}
+
+        <form onSubmit={sendMessage} className="flex gap-2">
+          <label className="cursor-pointer bg-white/5 hover:bg-white/10 p-2.5 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 group border border-white/5">
+            <ImageIcon size={18} className="text-white/40 group-hover:text-orange-400" />
+            <input type="file" aria-label="Upload image" className="hidden" accept="image/*" onChange={handleImageSelect} />
+          </label>
+          <Input
+            ref={inputRef}
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder={user ? (replyTo ? `Reply to ${replyTo.profiles?.username}...` : "Type your argument...") : "Sign in to chat..."}
+            disabled={!user}
+            className="bg-white/5 border-white/5 focus-visible:ring-orange-500 focus-visible:border-orange-500/30 h-11 rounded-xl"
+          />
+          <Button
+            type="submit"
+            disabled={sending || !user}
+            className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold h-11 px-5 rounded-xl shadow-lg shadow-orange-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-30"
+          >
+            <Send size={16} />
+          </Button>
+        </form>
       </div>
     </div>
   );
 };
-
-const UserEntry: React.FC<{ name: string; status: 'online' | 'away' | 'offline'; isAdmin?: boolean }> = ({ name, status, isAdmin }) => (
-  <div className="flex items-center justify-between group cursor-pointer hover:bg-white/5 p-2.5 rounded-xl transition-all">
-    <div className="flex items-center gap-3">
-      <div className="relative">
-        <Avatar className="w-8 h-8">
-          <AvatarFallback className="bg-orange-950 text-orange-400 text-xs font-bold">
-            {name[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-neutral-900 rounded-full ${
-          status === 'online' ? 'bg-green-500' : status === 'away' ? 'bg-yellow-500' : 'bg-gray-500'
-        }`} />
-      </div>
-      <span className="text-sm font-medium text-white/60 group-hover:text-white transition-colors">{name}</span>
-    </div>
-    {isAdmin && <Shield size={12} className="text-orange-400/50" />}
-  </div>
-);
 
 export default LiveChatRoom;

@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { MessageSquare, Home, Info, Rss, User, LogIn, LogOut, Menu, X } from 'lucide-react';
+import { MessageSquare, Home, Info, Rss, User, LogIn, LogOut, Menu, X, Shield, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from '../auth/AuthModal';
 
-const NAV_ITEMS = [
-  { to: '/', icon: Home, label: 'Home' },
-  { to: '/feed', icon: Rss, label: 'Feed' },
-  { to: '/chat', icon: MessageSquare, label: 'Chat' },
-  { to: '/about', icon: Info, label: 'About' },
-];
-
 const Navbar: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Build nav items based on auth state
+  const NAV_ITEMS = [
+    { to: '/', icon: Home, label: 'Home', requiresAuth: false },
+    { to: '/about', icon: Info, label: 'About', requiresAuth: false },
+    ...(user ? [
+      { to: '/feed', icon: Rss, label: 'Feed', requiresAuth: true },
+      { to: '/chat', icon: MessageSquare, label: 'Chat', requiresAuth: true },
+      { to: '/my-messages', icon: Mail, label: 'Inbox', requiresAuth: true },
+    ] : []),
+    ...(isAdmin ? [
+      { to: '/admin', icon: Shield, label: 'Admin', requiresAuth: true },
+    ] : []),
+  ];
 
   return (
     <>
@@ -34,7 +41,7 @@ const Navbar: React.FC = () => {
         </NavLink>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-6">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -48,7 +55,7 @@ const Navbar: React.FC = () => {
                 }`
               }
             >
-              <item.icon size={18} />
+              <item.icon size={16} />
               <span>{item.label}</span>
             </NavLink>
           ))}
