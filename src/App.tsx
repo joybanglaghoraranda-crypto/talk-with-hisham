@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
-import FloatingCTA from './components/layout/FloatingCTA';
 import BackgroundParticles from './components/effects/BackgroundParticles';
 import Hero from './components/home/Hero';
 import About from './components/home/About';
@@ -81,6 +80,27 @@ const App: React.FC = () => {
   const location = useLocation();
   const isFeedOrChat = location.pathname === '/feed' || location.pathname === '/chat';
 
+  // Handle Tawk.to widget visibility across SPA navigation
+  useEffect(() => {
+    const handleTawk = () => {
+      const tawk = (window as any).Tawk_API;
+      if (tawk && typeof tawk.hideWidget === 'function') {
+        if (location.pathname === '/chat') {
+          tawk.hideWidget();
+        } else {
+          tawk.showWidget();
+          if (typeof tawk.minimize === 'function') {
+            tawk.minimize();
+          }
+        }
+      }
+    };
+
+    handleTawk();
+    const timer = setTimeout(handleTawk, 1500);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
   return (
     <div className="relative min-h-screen bg-neutral-950 text-white overflow-x-hidden font-sans">
       {/* Background with Profile Pic & Particles */}
@@ -96,7 +116,6 @@ const App: React.FC = () => {
         <AnimatedRoutes />
       </main>
 
-      {!isFeedOrChat && <FloatingCTA />}
       {!isFeedOrChat && <Footer />}
     </div>
   );
