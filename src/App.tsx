@@ -78,6 +78,9 @@ const AnimatedRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const location = useLocation();
+  const isFeedOrChat = location.pathname === '/feed' || location.pathname === '/chat';
+
   return (
     <div className="relative min-h-screen bg-neutral-950 text-white overflow-x-hidden font-sans">
       {/* Background with Profile Pic & Particles */}
@@ -89,12 +92,12 @@ const App: React.FC = () => {
 
       <Navbar />
 
-      <main className="relative z-10 pt-24 pb-12 px-4 md:px-12 max-w-7xl mx-auto min-h-[80vh]">
+      <main className={`relative z-10 pt-24 ${isFeedOrChat ? 'pb-4' : 'pb-12'} px-4 md:px-12 max-w-7xl mx-auto min-h-[80vh]`}>
         <AnimatedRoutes />
       </main>
 
       <FloatingCTA />
-      <Footer />
+      {!isFeedOrChat && <Footer />}
     </div>
   );
 };

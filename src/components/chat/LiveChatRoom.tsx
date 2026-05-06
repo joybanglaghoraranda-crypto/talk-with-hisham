@@ -347,7 +347,7 @@ const LiveChatRoom: React.FC = () => {
 
                     <div className={`relative inline-flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                       {/* Action Buttons (React + Reply) */}
-                      <div className={`absolute -top-8 opacity-0 group-hover:opacity-100 transition-all z-20 flex items-center gap-0.5 ${
+                      <div className={`absolute -top-8 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all z-20 flex items-center gap-0.5 ${
                         isOwn ? 'right-0' : 'left-0'
                       }`}>
                         {user && (
