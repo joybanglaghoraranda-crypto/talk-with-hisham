@@ -16,9 +16,7 @@ const Footer: React.FC = () => {
           {/* Brand */}
           <div className="space-y-3 md:col-span-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-rose-600 flex items-center justify-center font-bold text-white text-sm">
-                H
-              </div>
+              <img src="/icon.png" alt="Talk with Hisham" className="w-8 h-8 rounded-full object-cover border border-white/10" />
               <span className="font-bold text-lg text-white">Talk with Hisham</span>
             </div>
             <p className="text-white/40 text-sm leading-relaxed max-w-sm">

@@ -96,7 +96,7 @@ const App: React.FC = () => {
         <AnimatedRoutes />
       </main>
 
-      <FloatingCTA />
+      {!isFeedOrChat && <FloatingCTA />}
       {!isFeedOrChat && <Footer />}
     </div>
   );

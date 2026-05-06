@@ -34,9 +34,7 @@ const Navbar: React.FC = () => {
       >
         {/* Logo */}
         <NavLink to="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-rose-600 flex items-center justify-center font-bold text-white group-hover:scale-110 transition-transform">
-            H
-          </div>
+          <img src="/icon.png" alt="Talk with Hisham" className="w-8 h-8 rounded-full object-cover group-hover:scale-110 transition-transform border border-white/10" />
           <span className="font-bold text-lg text-white hidden sm:inline">Talk with Hisham</span>
         </NavLink>
 
