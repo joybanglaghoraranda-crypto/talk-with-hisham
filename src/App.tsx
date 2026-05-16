@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import ScrollToTop from './components/layout/ScrollToTop';
+import InstallPrompt from './components/layout/InstallPrompt';
 import BackgroundParticles from './components/effects/BackgroundParticles';
 import Hero from './components/home/Hero';
 import About from './components/home/About';
@@ -71,6 +73,25 @@ const AnimatedRoutes: React.FC = () => {
             <PageTransition><AdminDashboard /></PageTransition>
           </RequireAuth>
         } />
+        {/* 404 Fallback */}
+        <Route path="*" element={
+          <PageTransition>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring' }}
+                className="text-8xl font-bold bg-gradient-to-r from-orange-400 to-rose-500 bg-clip-text text-transparent mb-4"
+              >
+                404
+              </motion.div>
+              <p className="text-white/40 text-lg mb-6">Page not found</p>
+              <a href="/" className="bg-gradient-to-r from-orange-500 to-rose-500 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-orange-500/20 hover:scale-105 active:scale-95 transition-all">
+                Go Home
+              </a>
+            </div>
+          </PageTransition>
+        } />
       </Routes>
     </AnimatePresence>
   );
@@ -101,6 +122,11 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location.pathname]);
+
   return (
     <div className="relative min-h-screen bg-neutral-950 text-white overflow-x-hidden font-sans">
       {/* Background with Profile Pic & Particles */}
@@ -117,6 +143,10 @@ const App: React.FC = () => {
       </main>
 
       {!isFeedOrChat && <Footer />}
+
+      {/* Global UI Elements */}
+      <ScrollToTop />
+      <InstallPrompt />
     </div>
   );
 };

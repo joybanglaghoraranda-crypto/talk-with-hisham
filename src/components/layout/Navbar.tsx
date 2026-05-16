@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { MessageSquare, Home, Info, Rss, User, LogIn, LogOut, Menu, X, Shield, Mail } from 'lucide-react';
+import { MessageSquare, Home, Info, Rss, User, LogIn, LogOut, Menu, X, Shield, Mail, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import AuthModal from '../auth/AuthModal';
+import NotificationBell from './NotificationBell';
 
 const Navbar: React.FC = () => {
   const { user, isAdmin, signOut } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const [authOpen, setAuthOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -59,8 +62,30 @@ const Navbar: React.FC = () => {
           ))}
         </div>
 
-        {/* Auth / Profile */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Auth / Profile / Theme / Notifications */}
+        <div className="hidden md:flex items-center gap-2">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/50 hover:text-white"
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            <AnimatePresence mode="wait">
+              {isDark ? (
+                <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <Sun size={18} />
+                </motion.div>
+              ) : (
+                <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <Moon size={18} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </button>
+
+          {/* Notifications */}
+          {user && <NotificationBell />}
+
           {user ? (
             <>
               <button
@@ -89,13 +114,27 @@ const Navbar: React.FC = () => {
           )}
         </div>
 
-        {/* Mobile Hamburger */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden text-white/70 hover:text-white transition-colors p-2"
-        >
-          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile Right Side */}
+        <div className="flex md:hidden items-center gap-1">
+          {/* Theme Toggle Mobile */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/50"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          {/* Notifications Mobile */}
+          {user && <NotificationBell />}
+
+          {/* Hamburger */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="text-white/70 hover:text-white transition-colors p-2"
+          >
+            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </motion.nav>
 
       {/* Mobile Menu */}

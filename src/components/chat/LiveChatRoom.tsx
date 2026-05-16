@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, uploadFile } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Hash, Users, Shield, Image as ImageIcon, X, Smile, Reply, CornerDownRight } from 'lucide-react';
+import { Send, Hash, Users, Shield, Image as ImageIcon, X, Smile, Reply, CornerDownRight, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -24,6 +24,17 @@ interface Message {
 
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
 
+const TypingIndicator: React.FC = () => (
+  <div className="flex items-center gap-2 px-4 py-2">
+    <div className="flex gap-1">
+      <span className="typing-dot" />
+      <span className="typing-dot" />
+      <span className="typing-dot" />
+    </div>
+    <span className="text-[10px] text-white/30">Someone is typing...</span>
+  </div>
+);
+
 const LiveChatRoom: React.FC = () => {
   const { user, isConfigured } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -33,9 +44,14 @@ const LiveChatRoom: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [showReactionsFor, setShowReactionsFor] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(1);
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isConfigured) return;
@@ -67,10 +83,27 @@ const LiveChatRoom: React.FC = () => {
       )
       .subscribe();
 
+    // Presence tracking
+    const presenceChannel = supabase.channel('chat_presence', {
+      config: { presence: { key: user?.id || 'anon' } },
+    });
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        setOnlineCount(Object.keys(state).length);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED' && user) {
+          await presenceChannel.track({ user_id: user.id, online_at: new Date().toISOString() });
+        }
+      });
+
     fetchMessages();
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(presenceChannel);
     };
   }, [isConfigured]);
 
@@ -145,6 +178,18 @@ const LiveChatRoom: React.FC = () => {
     inputRef.current?.focus();
   }, []);
 
+  const handleInputChange = (value: string) => {
+    setNewMessage(value);
+    // Typing indicator logic
+    if (value.trim()) {
+      setIsTyping(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 2000);
+    } else {
+      setIsTyping(false);
+    }
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && !imageFile) || sending) return;
@@ -159,6 +204,7 @@ const LiveChatRoom: React.FC = () => {
     const replyToId = replyTo?.id || null;
     setNewMessage('');
     setReplyTo(null);
+    setIsTyping(false);
 
     const msgId = crypto.randomUUID();
 
@@ -255,6 +301,11 @@ const LiveChatRoom: React.FC = () => {
     return messages.find(m => m.id === replyId) || null;
   };
 
+  // Filter messages by search
+  const displayMessages = searchQuery
+    ? messages.filter(m => m.content?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : messages;
+
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] max-w-5xl mx-auto">
       {/* Header */}
@@ -271,11 +322,48 @@ const LiveChatRoom: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-white/30">
-          <Users size={16} />
-          <span className="text-xs">{user ? '2+' : '1'} online</span>
+        <div className="flex items-center gap-3">
+          {/* Search Toggle */}
+          <button
+            onClick={() => { setShowSearch(!showSearch); setSearchQuery(''); }}
+            className={`p-2 rounded-lg transition-colors ${showSearch ? 'bg-orange-500/20 text-orange-400' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+            title="Search messages"
+          >
+            <Search size={16} />
+          </button>
+          <div className="flex items-center gap-2 text-white/30 bg-white/5 px-3 py-1.5 rounded-lg">
+            <Users size={14} />
+            <span className="text-xs font-medium">{onlineCount} online</span>
+          </div>
         </div>
       </div>
+
+      {/* Search Bar */}
+      <AnimatePresence>
+        {showSearch && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-black/30 backdrop-blur-xl border-x border-white/10 px-4"
+          >
+            <div className="py-2 flex gap-2 items-center">
+              <Search size={14} className="text-white/30" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none"
+                autoFocus
+              />
+              {searchQuery && (
+                <span className="text-[10px] text-white/30">{displayMessages.length} results</span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Messages Area */}
       <div
@@ -293,19 +381,21 @@ const LiveChatRoom: React.FC = () => {
           </p>
         </div>
 
-        {messages.length === 0 && (
+        {displayMessages.length === 0 && (
           <div className="text-center py-16 space-y-3">
             <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mx-auto border border-white/10">
               <Smile className="text-white/20" size={24} />
             </div>
-            <p className="text-white/25 italic text-sm">Be the first to start the debate.</p>
+            <p className="text-white/25 italic text-sm">
+              {searchQuery ? 'No messages match your search.' : 'Be the first to start the debate.'}
+            </p>
           </div>
         )}
 
         <AnimatePresence initial={false}>
-          {messages.map((msg, idx) => {
+          {displayMessages.map((msg, idx) => {
             const isOwn = user && msg.sender_id === user.id;
-            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
             const showDateSep = !prevMsg || getDateLabel(msg.created_at) !== getDateLabel(prevMsg.created_at);
             const repliedMsg = getReplyMessage(msg.reply_to);
 
@@ -506,7 +596,7 @@ const LiveChatRoom: React.FC = () => {
           <Input
             ref={inputRef}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
             placeholder={user ? (replyTo ? `Reply to ${replyTo.profiles?.username}...` : "Type your argument...") : "Sign in to chat..."}
             disabled={!user}
             className="bg-white/5 border-white/5 focus-visible:ring-orange-500 focus-visible:border-orange-500/30 h-11 rounded-xl"
