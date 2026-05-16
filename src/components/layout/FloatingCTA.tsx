@@ -1,15 +1,39 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Phone, X, MessageCircle } from 'lucide-react';
+import { Mail, Phone, X, MessageCircle, Headphones } from 'lucide-react';
 
 const FloatingCTA: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const openTawkChat = () => {
+    const tawk = (window as any).Tawk_API;
+    if (tawk) {
+      if (typeof tawk.showWidget === 'function') tawk.showWidget();
+      if (typeof tawk.maximize === 'function') tawk.maximize();
+      // Re-hide widget when user closes the chat window
+      tawk.onChatMinimized = () => {
+        if (typeof tawk.hideWidget === 'function') tawk.hideWidget();
+      };
+    }
+  };
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       <AnimatePresence>
         {isOpen && (
           <>
+            <motion.button
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
+              transition={{ delay: 0.2 }}
+              onClick={openTawkChat}
+              className="flex items-center gap-3 bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-full shadow-lg shadow-purple-600/30 transition-all hover:scale-105 group"
+            >
+              <Headphones size={18} />
+              <span className="text-sm font-semibold">Live Chat</span>
+            </motion.button>
+
             <motion.a
               initial={{ opacity: 0, y: 20, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}

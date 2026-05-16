@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { MessageSquareText, ArrowRight } from 'lucide-react';
 import { SOCIAL_LINKS } from '@/lib/constants';
 import GlassWrapper from '../layout/GlassWrapper';
-import StatsCounter from './StatsCounter';
 import FeaturesSection from './FeaturesSection';
 import CTASection from './CTASection';
 
@@ -90,8 +89,7 @@ const Hero: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Counter */}
-      <StatsCounter />
+
 
       {/* Features Section */}
       <FeaturesSection />

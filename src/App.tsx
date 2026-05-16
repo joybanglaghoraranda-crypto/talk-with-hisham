@@ -6,6 +6,7 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ScrollToTop from './components/layout/ScrollToTop';
 import InstallPrompt from './components/layout/InstallPrompt';
+import FloatingCTA from './components/layout/FloatingCTA';
 import BackgroundParticles from './components/effects/BackgroundParticles';
 import Hero from './components/home/Hero';
 import About from './components/home/About';
@@ -101,24 +102,16 @@ const App: React.FC = () => {
   const location = useLocation();
   const isFeedOrChat = location.pathname === '/feed' || location.pathname === '/chat';
 
-  // Handle Tawk.to widget visibility across SPA navigation
+  // Keep Tawk.to hidden — it's triggered from FloatingCTA only
   useEffect(() => {
-    const handleTawk = () => {
+    const hideTawk = () => {
       const tawk = (window as any).Tawk_API;
       if (tawk && typeof tawk.hideWidget === 'function') {
-        if (location.pathname === '/chat') {
-          tawk.hideWidget();
-        } else {
-          tawk.showWidget();
-          if (typeof tawk.minimize === 'function') {
-            tawk.minimize();
-          }
-        }
+        tawk.hideWidget();
       }
     };
-
-    handleTawk();
-    const timer = setTimeout(handleTawk, 1500);
+    hideTawk();
+    const timer = setTimeout(hideTawk, 2000);
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
@@ -145,6 +138,7 @@ const App: React.FC = () => {
       {!isFeedOrChat && <Footer />}
 
       {/* Global UI Elements */}
+      <FloatingCTA />
       <ScrollToTop />
       <InstallPrompt />
     </div>
