@@ -1,561 +1,417 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { supabase, uploadFile } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import GlassWrapper from '../layout/GlassWrapper';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { MessageSquare, Share2, Image as ImageIcon, X, Loader2, Rss, Send, Smile, Clock } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { cn } from '@/lib/utils';
+import {
+  Send, Loader2, ImagePlus, X, Heart, MessageCircle, Trash2, Share2, Pin,
+  MoreHorizontal, Smile, BookOpen,
+} from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { FEED_EMOJIS, ADMIN_EMAIL } from '@/lib/constants';
+import { formatRelativeTime, uploadFile, getInitials } from '@/lib/utils';
+import { toast } from 'sonner';
+import type { Post, Comment } from '@/lib/types';
 
-interface Post {
-  id: string;
-  author_id: string;
-  content: string;
-  image_url?: string;
-  likes_count: number;
-  reactions?: Record<string, string[]>;
-  created_at: string;
-  profiles?: {
-    username: string;
-    full_name: string;
-    avatar_url: string;
-  };
-}
-
-const FEED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
-
-const PublicFeed: React.FC = () => {
-  const { user, isConfigured, isAdmin } = useAuth();
+export default function PublicFeed() {
+  const { user, isAdmin } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [loadingPosts, setLoadingPosts] = useState(true);
-  const [newPostContent, setNewPostContent] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isPosting, setIsPosting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [newPost, setNewPost] = useState('');
+  const [postImage, setPostImage] = useState<File | null>(null);
+  const [postImagePreview, setPostImagePreview] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
-  const [comments, setComments] = useState<Record<string, any[]>>({});
-  const [replyTexts, setReplyTexts] = useState<Record<string, string>>({});
-  const [showReactionsFor, setShowReactionsFor] = useState<string | null>(null);
-  const [reactorView, setReactorView] = useState<string | null>(null);
-  const feedRef = useRef<HTMLDivElement>(null);
+  const [comments, setComments] = useState<Record<string, Comment[]>>({});
+  const [newComments, setNewComments] = useState<Record<string, string>>({});
+  const [activeEmoji, setActiveEmoji] = useState<string | null>(null);
+  const supabase = getSupabaseClient();
 
-  useEffect(() => {
-    fetchPosts();
-  }, [isConfigured]);
-
-  const fetchPosts = async () => {
-    if (!isConfigured) {
-      setLoadingPosts(false);
-      return;
-    }
-
+  const fetchPosts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('posts')
         .select('*, profiles(username, full_name, avatar_url)')
         .order('created_at', { ascending: false })
-        .limit(50);
-
+        .limit(30);
       if (error) throw error;
-      if (data) setPosts(data as Post[]);
+      setPosts(data || []);
     } catch (err) {
-      console.error('Failed to fetch posts:', err);
+      console.error('Error fetching posts:', err);
     } finally {
-      setLoadingPosts(false);
+      setLoading(false);
     }
-  };
+  }, [supabase]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
+  useEffect(() => {
+    fetchPosts();
+    // Realtime subscription
+    const channel = supabase
+      .channel('public_feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => fetchPosts())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchPosts, supabase]);
 
   const handlePost = async () => {
-    if (!newPostContent.trim() && !imageFile) return;
-
-    if (!isAdmin) {
-      toast.error('Only Hisham is allowed to create posts.');
-      return;
-    }
-
-    setIsPosting(true);
+    if (!newPost.trim() || !isAdmin) return;
+    setPosting(true);
     try {
-      let imageUrl = null;
-      if (imageFile) {
-        try {
-          const path = `posts/${user!.id}/${Date.now()}-${imageFile.name}`;
-          imageUrl = await uploadFile('media', path, imageFile);
-        } catch {
-          toast.error('Failed to upload image');
-        }
+      let imageUrl: string | undefined;
+      if (postImage) {
+        const path = `posts/${Date.now()}_${postImage.name}`;
+        imageUrl = await uploadFile(supabase as any, 'media', path, postImage);
       }
-
-      const { error } = await supabase.from('posts').insert([{
+      const { error } = await supabase.from('posts').insert({
         author_id: user!.id,
-        content: newPostContent,
-        image_url: imageUrl,
-      }]);
-
+        content: newPost.trim(),
+        image_url: imageUrl || null,
+        likes_count: 0,
+        reactions: {},
+      });
       if (error) throw error;
-
-      setNewPostContent('');
-      setImageFile(null);
-      setImagePreview(null);
-      toast.success('Posted!');
-      fetchPosts();
+      toast.success('Post published!');
+      setNewPost('');
+      setPostImage(null);
+      setPostImagePreview(null);
     } catch (err: any) {
-      console.error(err);
       toast.error(err.message || 'Failed to post');
     } finally {
-      setIsPosting(false);
+      setPosting(false);
     }
   };
 
-  const handleReact = async (postId: string, emoji: string) => {
-    if (!user) {
-      toast.error('Please sign in to react');
-      return;
-    }
-
-    const post = posts.find(p => p.id === postId);
+  const handleReaction = async (postId: string, emoji: string) => {
+    if (!user) return;
+    const post = posts.find((p) => p.id === postId);
     if (!post) return;
 
-    const currentReactions = post.reactions || {};
-    const hasReacted = currentReactions[emoji]?.includes(user.id);
-    const newReactions = { ...currentReactions };
+    const reactions = { ...(post.reactions || {}) };
+    const current = reactions[emoji] || [];
+    const already = current.includes(user.id);
 
-    // Remove user from all emojis first (one reaction per user)
-    Object.keys(newReactions).forEach(key => {
-      newReactions[key] = newReactions[key].filter((id: string) => id !== user.id);
-      if (newReactions[key].length === 0) delete newReactions[key];
-    });
-
-    if (!hasReacted) {
-      newReactions[emoji] = [...(newReactions[emoji] || []), user.id];
+    if (already) {
+      reactions[emoji] = current.filter((id: string) => id !== user.id);
+      if (reactions[emoji].length === 0) delete reactions[emoji];
+    } else {
+      reactions[emoji] = [...current, user.id];
     }
 
     // Optimistic update
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, reactions: newReactions } : p));
-    setShowReactionsFor(null);
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, reactions } : p)));
 
-    if (isConfigured) {
-      try {
-        await supabase.from('posts').update({ reactions: newReactions }).eq('id', postId);
-      } catch (err) {
-        console.error('Reaction failed:', err);
-      }
-    }
+    await supabase.from('posts').update({ reactions }).eq('id', postId);
   };
 
-  const toggleComments = async (postId: string) => {
-    const newExpanded = new Set(expandedComments);
-    if (newExpanded.has(postId)) {
-      newExpanded.delete(postId);
+  const handleLike = async (postId: string) => {
+    if (!user) return;
+    await handleReaction(postId, '❤️');
+  };
+
+  const handleDelete = async (postId: string) => {
+    if (!isAdmin) return;
+    const confirmed = window.confirm('Delete this post?');
+    if (!confirmed) return;
+    await supabase.from('posts').delete().eq('id', postId);
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    toast.success('Post deleted');
+  };
+
+  const fetchComments = async (postId: string) => {
+    const { data } = await supabase
+      .from('comments')
+      .select('*, profiles(username, avatar_url)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+    setComments((prev) => ({ ...prev, [postId]: data || [] }));
+  };
+
+  const toggleComments = (postId: string) => {
+    const updated = new Set(expandedComments);
+    if (updated.has(postId)) {
+      updated.delete(postId);
     } else {
-      newExpanded.add(postId);
-      if (!comments[postId] && isConfigured) {
-        try {
-          const { data } = await supabase
-            .from('comments')
-            .select('*, profiles(username, avatar_url)')
-            .eq('post_id', postId)
-            .order('created_at', { ascending: true });
-          if (data) setComments(prev => ({ ...prev, [postId]: data }));
-        } catch {
-          setComments(prev => ({ ...prev, [postId]: [] }));
-        }
-      }
+      updated.add(postId);
+      fetchComments(postId);
     }
-    setExpandedComments(newExpanded);
+    setExpandedComments(updated);
   };
 
-  const handleReply = async (postId: string) => {
-    const text = replyTexts[postId]?.trim();
-    if (!text) return;
+  const handleComment = async (postId: string) => {
+    const content = newComments[postId]?.trim();
+    if (!content || !user) return;
 
-    if (!user) {
-      toast.error('Please sign in to reply');
+    const { error } = await supabase.from('comments').insert({
+      post_id: postId,
+      author_id: user.id,
+      content,
+    });
+    if (error) {
+      toast.error('Failed to post comment');
       return;
     }
+    setNewComments((prev) => ({ ...prev, [postId]: '' }));
+    fetchComments(postId);
+  };
 
-    if (isConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('comments')
-          .insert([{ post_id: postId, author_id: user.id, content: text }])
-          .select('*, profiles(username, avatar_url)')
-          .single();
-
-        if (error) throw error;
-        if (data) {
-          setComments(prev => ({
-            ...prev,
-            [postId]: [...(prev[postId] || []), data]
-          }));
-        }
-      } catch (err: any) {
-        console.error(err);
-        toast.error(err.message || 'Failed to post reply');
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image must be under 5MB');
         return;
       }
-    }
-
-    setReplyTexts(prev => ({ ...prev, [postId]: '' }));
-    toast.success('Reply posted!');
-  };
-
-  const handleShare = (post: Post) => {
-    if (navigator.share) {
-      navigator.share({ title: 'Talk with Hisham', text: post.content, url: window.location.href }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(post.content);
-      toast.success('Copied to clipboard!');
+      setPostImage(file);
+      setPostImagePreview(URL.createObjectURL(file));
     }
   };
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const mins = Math.floor(diffMs / 60000);
-
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-
-    const isToday = date.toDateString() === now.toDateString();
-    if (isToday) {
-      return 'Today ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    }
-
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
-      ' ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const getReactionCount = (post: Post, emoji: string) => {
+    return (post.reactions?.[emoji] || []).length;
   };
 
-  const getTotalReactions = (reactions?: Record<string, string[]>) => {
-    if (!reactions) return 0;
-    return Object.values(reactions).reduce((sum, arr) => sum + arr.length, 0);
+  const hasReacted = (post: Post, emoji: string) => {
+    return user ? (post.reactions?.[emoji] || []).includes(user.id) : false;
   };
+
+  const totalLikes = (post: Post) => {
+    return Object.values(post.reactions || {}).reduce((sum, arr) => sum + arr.length, 0);
+  };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+        <BookOpen className="text-white/10 mb-4" size={48} />
+        <h2 className="text-xl font-heading font-bold text-white mb-2">Feed Access Required</h2>
+        <p className="text-white/35 text-sm">Sign in to view posts and join the conversation.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)] max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex-shrink-0 bg-black/40 backdrop-blur-xl border border-white/10 rounded-t-2xl px-5 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/30 to-rose-500/30 flex items-center justify-center text-orange-400 border border-orange-500/20">
-            <Rss size={18} />
-          </div>
-          <div>
-            <h2 className="font-bold text-white text-sm">Public Discourse</h2>
-            <p className="text-[10px] text-white/40 uppercase tracking-wider font-medium">Where opinions take shape</p>
-          </div>
-        </div>
+    <div className="max-w-2xl mx-auto py-6">
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight mb-1">Community Feed</h1>
+        <p className="text-white/30 text-sm">Follow the discourse, react, and share your thoughts.</p>
       </div>
 
-      {/* Scrollable Feed */}
-      <div ref={feedRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-black/20 backdrop-blur-md border-x border-white/10 custom-scrollbar">
-        {/* Create Post (Admin Only) */}
-        {isAdmin && (
-          <GlassWrapper className="p-4 border-orange-500/10">
-            <div className="flex gap-3">
-              <Avatar className="w-10 h-10 border border-white/10 shadow-lg flex-shrink-0">
-                <AvatarFallback className="bg-neutral-800 text-sm font-bold text-orange-300">
-                  {user?.email?.[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 space-y-3">
-                <textarea
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  className="w-full bg-transparent border-none focus:ring-0 text-white placeholder:text-white/20 resize-none min-h-[48px] text-sm outline-none leading-relaxed"
-                  placeholder="Share your perspective..."
-                  rows={2}
-                />
-                {imagePreview && (
-                  <div className="relative group inline-block">
-                    <img src={imagePreview} alt="Image preview" className="max-h-40 rounded-xl border border-white/10 shadow-xl" />
-                    <button
-                      onClick={() => { setImageFile(null); setImagePreview(null); }}
-                      aria-label="Remove image preview"
-                      className="absolute top-2 right-2 bg-black/60 hover:bg-rose-500 p-1.5 rounded-full backdrop-blur-md transition-all"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-2 border-t border-white/10">
-                  <label className="flex items-center gap-2 text-white/40 hover:text-orange-400 cursor-pointer transition-colors text-sm group">
-                    <div className="p-1.5 rounded-lg bg-white/5 group-hover:bg-orange-500/10 transition-colors">
-                      <ImageIcon size={14} />
-                    </div>
-                    <input type="file" aria-label="Upload image" className="hidden" accept="image/*" onChange={handleImageSelect} />
-                  </label>
-                  <Button
-                    onClick={handlePost}
-                    disabled={isPosting || (!newPostContent.trim() && !imageFile)}
-                    size="sm"
-                    className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 rounded-full font-bold px-5 shadow-lg shadow-orange-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-30 text-xs"
-                  >
-                    {isPosting ? <Loader2 className="animate-spin" size={14} /> : 'Post'}
-                  </Button>
+      {/* Post Composer (Admin Only) */}
+      {isAdmin && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-5 mb-6"
+        >
+          <textarea
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
+            placeholder="Share your thoughts with the community..."
+            className="w-full bg-transparent text-white placeholder:text-white/20 outline-none resize-none text-sm min-h-[80px] leading-relaxed"
+          />
+          {postImagePreview && (
+            <div className="relative mt-3 inline-block">
+              <img src={postImagePreview} alt="Preview" className="max-h-48 rounded-xl border border-white/8" />
+              <button onClick={() => { setPostImage(null); setPostImagePreview(null); }} className="absolute -top-2 -right-2 bg-surface-200 border border-white/8 p-1.5 rounded-full text-white/40 hover:text-white" title="Remove image">
+                <X size={12} />
+              </button>
+            </div>
+          )}
+          <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+            <label className="flex items-center gap-2 text-white/30 hover:text-white/60 cursor-pointer transition-colors text-xs">
+              <ImagePlus size={16} />
+              <span>Add Image</span>
+              <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+            </label>
+            <button
+              onClick={handlePost}
+              disabled={posting || !newPost.trim()}
+              className="flex items-center gap-2 bg-gradient-to-r from-brand-500 to-accent-500 hover:from-brand-600 hover:to-accent-600 px-5 py-2 rounded-lg text-sm font-bold text-white shadow-lg shadow-brand-500/15 disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+            >
+              {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Post
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Posts */}
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="glass-card p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full skeleton" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-3 w-32 skeleton rounded-md" />
+                  <div className="h-2 w-20 skeleton rounded-md" />
                 </div>
               </div>
+              <div className="h-3 w-full skeleton rounded-md" />
+              <div className="h-3 w-3/4 skeleton rounded-md" />
             </div>
-          </GlassWrapper>
-        )}
-
-        {!isAdmin && (
-          <GlassWrapper className="p-4 border-orange-500/10 text-center">
-            <p className="text-white/50 text-xs">
-              {user ? "Enjoy the feed! Only Hisham can create new posts, but you can react and reply." : "Sign in to interact with the feed."}
-            </p>
-          </GlassWrapper>
-        )}
-
-        {/* Loading */}
-        {loadingPosts && (
-          <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-orange-500" size={24} />
-          </div>
-        )}
-
-        {!loadingPosts && posts.length === 0 && (
-          <div className="text-center py-12 text-white/20 text-sm italic">
-            No posts yet. Stay tuned!
-          </div>
-        )}
-
-        {/* Posts */}
-        <AnimatePresence initial={false}>
-          {posts.map((post) => (
-            <motion.div
-              key={post.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <GlassWrapper className="group p-0 overflow-hidden border-white/5 hover:border-white/10 transition-all">
-                <div className="p-4 space-y-3">
-                  {/* Author Header */}
-                  <div className="flex gap-3 items-center">
-                    <Avatar className="w-10 h-10 border border-white/10 shadow-lg">
-                      <AvatarImage src={post.profiles?.avatar_url} />
-                      <AvatarFallback className="bg-neutral-800 text-xs font-bold text-orange-300">
-                        {post.profiles?.username?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-orange-200 text-sm">{post.profiles?.full_name || post.profiles?.username || 'User'}</h4>
-                      <p className="text-[10px] text-white/30 flex items-center gap-1">
-                        <Clock size={9} />
-                        @{post.profiles?.username} · {formatTime(post.created_at)}
-                      </p>
-                    </div>
+          ))}
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="glass-card py-16 text-center">
+          <BookOpen className="mx-auto text-white/10 mb-3" size={40} />
+          <p className="text-white/25 text-sm">No posts yet. Stay tuned!</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
+            {posts.map((post) => (
+              <motion.div
+                key={post.id}
+                layout
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="glass-card glass-card-hover p-5 group"
+              >
+                {/* Post Header */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-brand-500/20">
+                    {getInitials(post.profiles?.full_name || post.profiles?.username)}
                   </div>
-
-                  {/* Content */}
-                  <p className="text-white/80 leading-relaxed text-sm">{post.content}</p>
-
-                  {/* Image */}
-                  {post.image_url && (
-                    <div className="rounded-xl overflow-hidden border border-white/10 shadow-xl">
-                      <img src={post.image_url} alt="Post" className="w-full h-auto object-cover max-h-[400px]" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-white truncate">{post.profiles?.full_name || post.profiles?.username || 'Unknown'}</p>
+                      {post.author_id === user?.id || post.profiles?.username === 'hisham' ? (
+                        <span className="text-[9px] bg-brand-500/10 text-brand-400 px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider">Author</span>
+                      ) : null}
+                    </div>
+                    <p className="text-[11px] text-white/25">@{post.profiles?.username} · {formatRelativeTime(post.created_at)}</p>
+                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDelete(post.id)} className="p-1.5 text-white/20 hover:text-accent-400 transition-colors rounded-lg hover:bg-white/5" title="Delete">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   )}
+                </div>
 
-                  {/* Reactions Display */}
-                  {post.reactions && Object.keys(post.reactions).length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {Object.entries(post.reactions).map(([emoji, userIds]) => (
-                        <button
-                          key={emoji}
-                          onClick={() => user ? handleReact(post.id, emoji) : toast.error('Sign in to react')}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            if (isAdmin) setReactorView(reactorView === `${post.id}-${emoji}` ? null : `${post.id}-${emoji}`);
-                          }}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-all hover:scale-105 ${
-                            userIds.includes(user?.id || '')
-                              ? 'bg-orange-500/15 border-orange-500/30 text-orange-300'
-                              : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
-                          }`}
-                        >
-                          <span>{emoji}</span>
-                          <span className="font-semibold text-[10px]">{userIds.length}</span>
-                        </button>
-                      ))}
-                      <span className="text-[10px] text-white/20 ml-1">{getTotalReactions(post.reactions)} reactions</span>
-                    </div>
-                  )}
+                {/* Post Content */}
+                <p className="text-white/75 leading-relaxed text-[15px] mb-3 whitespace-pre-wrap">{post.content}</p>
 
-                  {/* Admin: Reactor Details (right-click on emoji to see) */}
-                  {isAdmin && reactorView?.startsWith(post.id) && (
+                {post.image_url && (
+                  <div className="mb-3 rounded-xl overflow-hidden border border-white/5">
+                    <img src={post.image_url} alt="Post attachment" className="w-full max-h-96 object-cover" loading="lazy" />
+                  </div>
+                )}
+
+                {/* Reactions */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {FEED_EMOJIS.map((emoji) => {
+                    const count = getReactionCount(post, emoji);
+                    const reacted = hasReacted(post, emoji);
+                    if (count === 0 && activeEmoji !== post.id) return null;
+                    return (
+                      <button
+                        key={emoji}
+                        onClick={() => handleReaction(post.id, emoji)}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs transition-all ${
+                          reacted
+                            ? 'bg-brand-500/15 border border-brand-500/30 text-brand-300'
+                            : 'bg-white/3 border border-white/8 text-white/40 hover:bg-white/5'
+                        }`}
+                      >
+                        <span className="text-sm">{emoji}</span>
+                        {count > 0 && <span className="font-medium">{count}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 pt-2 border-t border-white/5">
+                  <button onClick={() => handleLike(post.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${hasReacted(post, '❤️') ? 'text-accent-400 bg-accent-500/10' : 'text-white/30 hover:text-accent-400 hover:bg-white/5'}`}>
+                    <Heart size={14} fill={hasReacted(post, '❤️') ? 'currentColor' : 'none'} /> {totalLikes(post) || ''}
+                  </button>
+                  <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all">
+                    <MessageCircle size={14} /> {(comments[post.id] || []).length || ''}
+                  </button>
+                  <button onClick={() => setActiveEmoji(activeEmoji === post.id ? null : post.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all" title="React">
+                    <Smile size={14} />
+                  </button>
+                </div>
+
+                {/* Emoji Picker */}
+                <AnimatePresence>
+                  {activeEmoji === post.id && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
-                      className="bg-white/5 rounded-xl p-3 border border-white/5 text-xs text-white/50 overflow-hidden"
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
                     >
-                      <p className="text-[10px] text-orange-400/60 font-semibold uppercase tracking-wider mb-2">Who reacted</p>
-                      {Object.entries(post.reactions || {}).map(([emoji, ids]) => (
-                        <div key={emoji} className="flex items-center gap-2 mb-1">
-                          <span>{emoji}</span>
-                          <span className="text-white/40">{ids.length} users: {ids.map((id: string) => id.slice(0, 8)).join(', ')}</span>
-                        </div>
-                      ))}
+                      <div className="flex gap-1.5 pt-3">
+                        {FEED_EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => { handleReaction(post.id, emoji); setActiveEmoji(null); }}
+                            className="text-xl hover:scale-130 transition-transform p-1"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
                     </motion.div>
                   )}
+                </AnimatePresence>
 
-                  {/* Action Bar */}
-                  <div className="flex items-center gap-1 pt-2 border-t border-white/5 relative">
-                    {/* React Button */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowReactionsFor(showReactionsFor === post.id ? null : post.id)}
-                        className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:bg-white/5 active:scale-95",
-                          getTotalReactions(post.reactions) > 0 ? "text-orange-400" : "text-white/30 hover:text-white/60"
-                        )}
-                      >
-                        <Smile size={16} />
-                        {getTotalReactions(post.reactions) > 0 && (
-                          <span className="text-xs font-semibold">{getTotalReactions(post.reactions)}</span>
-                        )}
-                      </button>
-
-                      {/* Emoji Picker Popup */}
-                      <AnimatePresence>
-                        {showReactionsFor === post.id && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 5 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 5 }}
-                            className="absolute bottom-full left-0 mb-2 bg-neutral-900 border border-white/10 rounded-full shadow-2xl px-2 py-1.5 flex gap-1 z-30"
-                          >
-                            {FEED_EMOJIS.map(emoji => (
-                              <button
-                                key={emoji}
-                                onClick={() => handleReact(post.id, emoji)}
-                                className="hover:scale-130 transition-transform text-lg p-0.5 hover:bg-white/10 rounded-md"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {/* Comment Button */}
-                    <FeedAction
-                      icon={<MessageSquare size={16} />}
-                      count={comments[post.id]?.length}
-                      active={expandedComments.has(post.id)}
-                      activeColor="text-blue-400"
-                      onClick={() => toggleComments(post.id)}
-                    />
-
-                    {/* Share Button */}
-                    <FeedAction
-                      icon={<Share2 size={16} />}
-                      onClick={() => handleShare(post)}
-                    />
-                  </div>
-
-                  {/* Comments Section */}
-                  <AnimatePresence>
-                    {expandedComments.has(post.id) && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="space-y-3 pt-3 border-t border-white/5">
-                          {(!comments[post.id] || comments[post.id].length === 0) && (
-                            <p className="text-white/20 text-xs italic text-center py-2">No replies yet. Be the first!</p>
-                          )}
-                          {comments[post.id]?.map((comment: any) => (
-                            <div key={comment.id} className="flex gap-2 items-start">
-                              <Avatar className="w-6 h-6 border border-white/10 flex-shrink-0">
-                                <AvatarImage src={comment.profiles?.avatar_url} />
-                                <AvatarFallback className="bg-neutral-800 text-[9px] font-bold text-white/60">
-                                  {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="bg-white/5 rounded-xl rounded-tl-sm p-2.5 border border-white/5 flex-1">
-                                <div className="flex items-center gap-2 mb-0.5">
-                                  <span className="text-[10px] font-semibold text-white/60">@{comment.profiles?.username || 'user'}</span>
-                                  <span className="text-[9px] text-white/20 flex items-center gap-0.5">
-                                    <Clock size={8} /> {formatTime(comment.created_at)}
-                                  </span>
-                                </div>
-                                <p className="text-white/70 text-xs leading-relaxed">{comment.content}</p>
+                {/* Comments */}
+                <AnimatePresence>
+                  {expandedComments.has(post.id) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
+                        {(comments[post.id] || []).map((comment) => (
+                          <div key={comment.id} className="flex gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-surface-300 flex items-center justify-center text-[9px] font-bold text-white/40 flex-shrink-0">
+                              {getInitials(comment.profiles?.username)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-white/70">@{comment.profiles?.username}</span>
+                                <span className="text-[10px] text-white/20">{formatRelativeTime(comment.created_at)}</span>
                               </div>
+                              <p className="text-xs text-white/50 mt-0.5 leading-relaxed">{comment.content}</p>
                             </div>
-                          ))}
-                          {user && (
-                            <div className="flex gap-2 pt-1">
-                              <Input
-                                value={replyTexts[post.id] || ''}
-                                onChange={(e) => setReplyTexts(prev => ({ ...prev, [post.id]: e.target.value }))}
-                                onKeyDown={(e) => { if (e.key === 'Enter') handleReply(post.id); }}
-                                placeholder="Write a reply..."
-                                className="bg-white/5 border-white/5 h-8 text-xs rounded-full focus-visible:ring-orange-500"
-                              />
-                              <Button
-                                onClick={() => handleReply(post.id)}
-                                size="sm"
-                                className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-full h-8 px-3"
-                              >
-                                <Send size={12} />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </GlassWrapper>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+                          </div>
+                        ))}
 
-      {/* Bottom bar */}
-      <div className="flex-shrink-0 bg-black/40 backdrop-blur-xl border border-white/10 border-t-0 rounded-b-2xl px-5 py-3 text-center">
-        <p className="text-[10px] text-white/20 uppercase tracking-wider">
-          {posts.length} posts · Scroll to explore
-        </p>
-      </div>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            placeholder="Write a comment..."
+                            value={newComments[post.id] || ''}
+                            onChange={(e) => setNewComments((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                            onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
+                            className="flex-1 bg-white/3 border border-white/8 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-brand-500/30"
+                          />
+                          <button
+                            onClick={() => handleComment(post.id)}
+                            disabled={!newComments[post.id]?.trim()}
+                            className="p-2 bg-brand-500/20 rounded-lg text-brand-400 hover:bg-brand-500/30 disabled:opacity-20 transition-all"
+                            title="Send comment"
+                          >
+                            <Send size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
-};
-
-const FeedAction: React.FC<{
-  icon: React.ReactNode;
-  count?: number;
-  active?: boolean;
-  activeColor?: string;
-  onClick?: () => void;
-}> = ({ icon, count, active, activeColor = 'text-orange-400', onClick }) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:bg-white/5 active:scale-95",
-      active ? activeColor : "text-white/30 hover:text-white/60"
-    )}
-  >
-    {icon}
-    {count !== undefined && count > 0 && <span className="text-xs font-semibold">{count}</span>}
-  </button>
-);
-
-export default PublicFeed;
+}

@@ -1,46 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { MapPin, Calendar, Settings, BookOpen, MessageCircle, Award, ExternalLink, Sparkles, Heart } from 'lucide-react';
+'use client';
+
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { MapPin, Calendar, Settings, BookOpen, MessageCircle, Award, ExternalLink, Sparkles, Heart } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth-store';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { SOCIAL_LINKS } from '@/lib/constants';
-import GlassWrapper from '../layout/GlassWrapper';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Button } from '../ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-
-interface Profile {
-  id: string;
-  username: string;
-  full_name: string;
-  bio: string;
-  avatar_url: string;
-}
-
-interface UserPost {
-  id: string;
-  content: string;
-  likes_count: number;
-  created_at: string;
-}
+import { formatRelativeTime, getInitials } from '@/lib/utils';
+import Link from 'next/link';
+import type { Profile } from '@/lib/types';
 
 const DEFAULT_PROFILE: Profile = {
   id: 'hisham',
   username: 'hisham',
   full_name: 'Muhibbullah Hisham',
-  bio: 'Educator, researcher, and lifelong learner. Integrating classical Islamic scholarship with modern thought. Passionate about mentoring youth, curriculum development, and intellectual discourse.',
+  bio: 'Educator, researcher, and lifelong learner. Integrating classical Islamic scholarship with modern thought.',
   avatar_url: '/images/hisham.png',
 };
 
-const ProfilePage: React.FC<{ userId?: string }> = ({ userId }) => {
-  const { user, isConfigured } = useAuth();
-  const navigate = useNavigate();
+export default function ProfilePage({ userId }: { userId?: string }) {
+  const { user } = useAuthStore();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
-  const [postCount, setPostCount] = useState(0);
+  const [posts, setPosts] = useState<{ id: string; content: string; likes_count: number; created_at: string }[]>([]);
+  const [activeTab, setActiveTab] = useState('posts');
+  const supabase = getSupabaseClient();
 
   useEffect(() => {
     fetchProfile();
@@ -48,151 +33,106 @@ const ProfilePage: React.FC<{ userId?: string }> = ({ userId }) => {
 
   const fetchProfile = async () => {
     try {
-      if (isConfigured && user) {
+      if (user) {
         const targetId = userId || user.id;
         setIsOwnProfile(user.id === targetId);
 
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', targetId)
-          .single();
-
+        const { data } = await supabase.from('profiles').select('*').eq('id', targetId).single();
         if (data) {
           setProfile(data);
-          // Fetch user's posts
-          fetchUserPosts(targetId);
+          fetchPosts(targetId);
           setLoading(false);
           return;
         }
       }
-
       setProfile(DEFAULT_PROFILE);
       setIsOwnProfile(false);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setProfile(DEFAULT_PROFILE);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUserPosts = async (profileId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('id, content, likes_count, created_at')
-        .eq('author_id', profileId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (!error && data) {
-        setUserPosts(data);
-        setPostCount(data.length);
-      }
-    } catch {
-      // Silently fail
-    }
-  };
-
-  const formatTime = (dateStr: string) => {
-    const diffMs = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diffMs / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    if (mins < 1440) return `${Math.floor(mins / 60)}h ago`;
-    return `${Math.floor(mins / 1440)}d ago`;
+  const fetchPosts = async (profileId: string) => {
+    const { data } = await supabase
+      .from('posts')
+      .select('id, content, likes_count, created_at')
+      .eq('author_id', profileId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (data) setPosts(data);
   };
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-8">
-        <GlassWrapper className="p-0 overflow-hidden">
-          <div className="h-56 bg-gradient-to-r from-orange-600/10 to-rose-600/10 animate-pulse" />
-          <div className="px-8 pb-8 flex gap-6 items-end -mt-20">
-            <div className="w-36 h-36 rounded-2xl bg-neutral-800 animate-pulse border-4 border-neutral-950" />
+      <div className="max-w-4xl mx-auto">
+        <div className="glass-card p-0 overflow-hidden">
+          <div className="h-52 bg-gradient-to-r from-brand-600/10 to-accent-600/10 skeleton" />
+          <div className="px-8 pb-8 flex gap-6 items-end -mt-16">
+            <div className="w-32 h-32 rounded-2xl skeleton border-4 border-surface-0" />
             <div className="flex-1 space-y-3 mb-4">
-              <div className="h-8 w-48 bg-white/10 rounded-xl animate-pulse" />
-              <div className="h-4 w-32 bg-white/10 rounded-lg animate-pulse" />
+              <div className="h-8 w-48 skeleton rounded-xl" />
+              <div className="h-4 w-32 skeleton rounded-lg" />
             </div>
           </div>
-        </GlassWrapper>
+        </div>
       </div>
     );
   }
 
-  if (!profile) return <div className="text-center p-12 opacity-50">Profile not found.</div>;
+  if (!profile) return <div className="text-center p-12 text-white/30">Profile not found.</div>;
 
-  const STATS = [
-    { label: 'Posts', value: String(postCount), icon: BookOpen },
-    { label: 'Conversations', value: '—', icon: MessageCircle },
-    { label: 'Contributions', value: '—', icon: Award },
-  ];
+  const TABS = ['posts', 'conversations', 'replies'];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto space-y-8"
-    >
-      {/* Profile Header Card */}
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-6">
+      {/* Header Card */}
       <div className="relative">
-        <div className="absolute -inset-2 bg-gradient-to-r from-orange-500/10 via-rose-500/5 to-orange-500/10 rounded-[2.5rem] blur-2xl opacity-50" />
+        <div className="absolute -inset-2 bg-gradient-to-r from-brand-500/10 via-accent-500/5 to-brand-500/10 rounded-[2.5rem] blur-2xl opacity-50" />
 
-        <GlassWrapper className="relative p-0 overflow-hidden border-white/10">
-          <div className="h-52 md:h-60 bg-gradient-to-br from-orange-600/25 via-rose-600/15 to-neutral-900 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/images/hisham.png')] bg-cover bg-center opacity-15 blur-sm" />
-            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent" />
-            <div className="absolute top-6 right-8 w-20 h-20 bg-orange-500/10 rounded-full blur-2xl animate-pulse" />
+        <div className="relative glass-card p-0 overflow-hidden">
+          <div className="h-48 md:h-56 bg-gradient-to-br from-brand-600/20 via-accent-600/10 to-surface-200 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/images/hisham.png')] bg-cover bg-center opacity-10 blur-sm" />
+            <div className="absolute inset-0 bg-gradient-to-t from-surface-0 via-transparent to-transparent" />
           </div>
 
-          <div className="px-6 md:px-10 pb-8 relative">
-            <div className="flex flex-col md:flex-row gap-6 items-start md:items-end -mt-20 relative z-10">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-br from-orange-500 to-rose-500 rounded-2xl opacity-60 blur-sm" />
-                <Avatar className="relative w-32 h-32 md:w-36 md:h-36 border-4 border-neutral-950 shadow-2xl rounded-2xl">
-                  <AvatarImage src={profile.avatar_url} className="rounded-2xl object-cover" />
-                  <AvatarFallback className="bg-neutral-800 text-4xl font-bold rounded-2xl text-orange-400">
-                    {profile.username?.[0]?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+          <div className="px-6 md:px-8 pb-8 relative">
+            <div className="flex flex-col md:flex-row gap-5 items-start md:items-end -mt-16 relative z-10">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-br from-brand-500 to-accent-500 rounded-2xl opacity-60 blur-sm" />
+                <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-surface-300 border-4 border-surface-0 flex items-center justify-center text-4xl font-heading font-bold text-brand-400 overflow-hidden">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(profile.full_name || profile.username)
+                  )}
+                </div>
               </div>
 
-              <div className="flex-1 space-y-1 mb-1">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-                    {profile.full_name || profile.username}
-                  </h1>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">{profile.full_name || profile.username}</h1>
                   {!isOwnProfile && (
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0" title="Verified">
+                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
                       <Sparkles size={10} className="text-white" />
                     </div>
                   )}
                 </div>
-                <p className="text-orange-400 font-medium">@{profile.username}</p>
+                <p className="text-brand-400 text-sm font-medium">@{profile.username}</p>
               </div>
 
-              <div className="flex gap-2 mb-1 self-start md:self-end">
+              <div className="flex gap-2">
                 {isOwnProfile ? (
-                  <Button
-                    onClick={() => navigate('/settings')}
-                    className="bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-full px-6 transition-all hover:scale-105"
-                  >
-                    <Settings className="mr-2" size={16} />
-                    Edit Profile
-                  </Button>
+                  <Link href="/settings" className="flex items-center gap-2 bg-white/5 hover:bg-white/8 border border-white/8 text-white text-sm px-5 py-2 rounded-xl transition-all hover:scale-105">
+                    <Settings size={14} /> Edit Profile
+                  </Link>
                 ) : (
                   <div className="flex gap-2">
                     {SOCIAL_LINKS.map((social) => (
-                      <a
-                        key={social.label}
-                        href={social.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={social.label}
-                        className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 hover:bg-white/15 flex items-center justify-center text-white/40 hover:text-orange-400 transition-all hover:scale-110 hover:border-orange-500/30"
-                      >
-                        <social.icon size={16} />
+                      <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer" title={social.label}
+                        className="w-9 h-9 rounded-lg border border-white/8 bg-white/3 hover:bg-white/8 flex items-center justify-center text-white/40 hover:text-brand-400 transition-all hover:scale-110">
+                        <social.icon size={14} />
                       </a>
                     ))}
                   </div>
@@ -200,90 +140,83 @@ const ProfilePage: React.FC<{ userId?: string }> = ({ userId }) => {
               </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-              <p className="text-white/70 max-w-2xl leading-relaxed">
-                {profile.bio || "No bio yet."}
-              </p>
-              <div className="flex flex-wrap gap-4 text-white/35 text-sm">
-                <div className="flex items-center gap-1.5">
-                  <MapPin size={14} /> <span>Bangladesh</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={14} /> <span>Joined May 2026</span>
-                </div>
+            <div className="mt-5 space-y-3">
+              <p className="text-white/60 max-w-2xl leading-relaxed text-sm">{profile.bio || 'No bio yet.'}</p>
+              <div className="flex flex-wrap gap-4 text-white/25 text-xs">
+                <div className="flex items-center gap-1.5"><MapPin size={12} /> Bangladesh</div>
+                <div className="flex items-center gap-1.5"><Calendar size={12} /> Joined May 2026</div>
                 {!isOwnProfile && (
-                  <a href="https://t.me/twhisham" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-orange-400 transition-colors">
-                    <ExternalLink size={14} /> <span>t.me/twhisham</span>
+                  <a href="https://t.me/twhisham" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-brand-400 transition-colors">
+                    <ExternalLink size={12} /> t.me/twhisham
                   </a>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mt-6">
-              {STATS.map((stat) => (
-                <div key={stat.label} className="bg-white/5 border border-white/5 rounded-xl p-4 text-center hover:bg-white/10 transition-colors group cursor-default">
-                  <stat.icon size={18} className="mx-auto text-white/20 group-hover:text-orange-400 transition-colors mb-2" />
-                  <p className="text-xl font-bold text-white">{stat.value}</p>
-                  <p className="text-[10px] uppercase tracking-widest text-white/30 font-semibold mt-0.5">{stat.label}</p>
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 mt-5">
+              {[
+                { label: 'Posts', value: posts.length, icon: BookOpen },
+                { label: 'Conversations', value: '—', icon: MessageCircle },
+                { label: 'Contributions', value: '—', icon: Award },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white/3 border border-white/5 rounded-xl p-3 text-center hover:bg-white/5 transition-colors cursor-default group">
+                  <stat.icon size={16} className="mx-auto text-white/15 group-hover:text-brand-400 transition-colors mb-1.5" />
+                  <p className="text-lg font-heading font-bold text-white">{stat.value}</p>
+                  <p className="text-[9px] uppercase tracking-widest text-white/25 font-semibold">{stat.label}</p>
                 </div>
               ))}
             </div>
           </div>
-        </GlassWrapper>
+        </div>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="posts" className="w-full">
-        <TabsList className="bg-white/5 border border-white/10 p-1 rounded-xl mb-6 w-full grid grid-cols-3">
-          <TabsTrigger value="posts" className="rounded-lg data-[state=active]:bg-orange-500/20 data-[state=active]:text-orange-400">Posts</TabsTrigger>
-          <TabsTrigger value="conversations" className="rounded-lg data-[state=active]:bg-orange-500/20 data-[state=active]:text-orange-400">Conversations</TabsTrigger>
-          <TabsTrigger value="replies" className="rounded-lg data-[state=active]:bg-orange-500/20 data-[state=active]:text-orange-400">Replies</TabsTrigger>
-        </TabsList>
+      <div className="w-full">
+        <div className="flex bg-white/3 border border-white/8 rounded-xl p-1 mb-5">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium capitalize transition-all ${
+                activeTab === tab ? 'bg-brand-500/20 text-brand-400' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-        <TabsContent value="posts">
-          <div className="grid grid-cols-1 gap-4">
-            {userPosts.length === 0 && (
-              <GlassWrapper className="border-white/5">
-                <div className="py-8 text-center space-y-3">
-                  <BookOpen className="mx-auto text-white/10" size={40} />
-                  <p className="text-white/25 text-sm">No posts yet.</p>
+        {activeTab === 'posts' && (
+          <div className="space-y-3">
+            {posts.length === 0 ? (
+              <div className="glass-card py-12 text-center">
+                <BookOpen className="mx-auto text-white/10 mb-3" size={36} />
+                <p className="text-white/20 text-sm">No posts yet.</p>
+              </div>
+            ) : (
+              posts.map((post) => (
+                <div key={post.id} className="glass-card glass-card-hover p-5">
+                  <p className="text-white/65 leading-relaxed text-[14px]">{post.content}</p>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                    <span className="text-white/20 text-xs">{formatRelativeTime(post.created_at)}</span>
+                    <span className="text-white/25 text-xs flex items-center gap-1">
+                      <Heart size={12} className="text-accent-400" /> {post.likes_count}
+                    </span>
+                  </div>
                 </div>
-              </GlassWrapper>
+              ))
             )}
-            {userPosts.map((post) => (
-              <GlassWrapper key={post.id} className="border-white/5 hover:border-white/10 transition-all">
-                <p className="text-white/75 leading-relaxed">{post.content}</p>
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
-                  <span className="text-white/25 text-xs">{formatTime(post.created_at)}</span>
-                  <span className="text-white/30 text-xs flex items-center gap-1">
-                    <Heart size={12} className="text-rose-400" /> {post.likes_count}
-                  </span>
-                </div>
-              </GlassWrapper>
-            ))}
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="conversations">
-          <GlassWrapper className="border-white/5">
-            <div className="py-8 text-center space-y-3">
-              <MessageCircle className="mx-auto text-white/10" size={40} />
-              <p className="text-white/25 text-sm">No conversations to show yet.</p>
-            </div>
-          </GlassWrapper>
-        </TabsContent>
-
-        <TabsContent value="replies">
-          <GlassWrapper className="border-white/5">
-            <div className="py-8 text-center space-y-3">
-              <MessageCircle className="mx-auto text-white/10" size={40} />
-              <p className="text-white/25 text-sm">No replies to show yet.</p>
-            </div>
-          </GlassWrapper>
-        </TabsContent>
-      </Tabs>
+        {activeTab !== 'posts' && (
+          <div className="glass-card py-12 text-center">
+            <MessageCircle className="mx-auto text-white/10 mb-3" size={36} />
+            <p className="text-white/20 text-sm">No {activeTab} to show yet.</p>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
-};
-
-export default ProfilePage;
+}
