@@ -68,9 +68,14 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/5 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-3">
-          <p className="text-white/25 text-xs">
-            © {new Date().getFullYear()} {SITE_CONFIG.name}. All rights reserved.
-          </p>
+          <div className="text-white/25 text-xs flex flex-col md:flex-row items-center gap-3 md:gap-4">
+            <span>© {new Date().getFullYear()} {SITE_CONFIG.name}. All rights reserved.</span>
+            <div className="flex items-center gap-3">
+              <span className="hidden md:inline text-white/10">|</span>
+              <Link href="/privacy" className="hover:text-white/60 transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-white/60 transition-colors">Terms</Link>
+            </div>
+          </div>
           <p className="text-white/15 text-[10px] tracking-widest uppercase font-medium">
             Built with purpose & passion
           </p>
