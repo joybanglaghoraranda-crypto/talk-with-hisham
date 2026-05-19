@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   },
   description:
     'A personal portfolio and social platform by Muhibbullah Hisham — for real-time debates, communication, and intellectual discourse.',
-  metadataBase: new URL('https://talkwithhisham.vercel.app'),
+  metadataBase: new URL('https://twhisham.vercel.app'),
   openGraph: {
     title: 'Talk with Hisham',
     description:
@@ -32,6 +32,9 @@ export const metadata: Metadata = {
     apple: '/icon.png',
   },
   manifest: '/manifest.json',
+  verification: {
+    google: 'qLpGYU0kNvVtbbOh9PLKEZGndZmu3LiqbmX0orkqCFM',
+  },
   other: {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
