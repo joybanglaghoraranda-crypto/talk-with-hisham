@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Loader2, ImagePlus, X, MessageCircle, Trash2, Share2,
-  Smile, BookOpen, Link2, Check,
+  Smile, BookOpen, Link2, Check, User,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { FEED_EMOJIS } from '@/lib/constants';
-import { formatRelativeTime, uploadFile, getInitials, sanitizeUrl } from '@/lib/utils';
+import { formatRelativeTime, uploadFile, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Post, Comment } from '@/lib/types';
 import Link from 'next/link';
@@ -314,11 +314,11 @@ export default function PublicFeed() {
               >
                 {/* Post Header */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-brand-500/20 overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-surface-300 flex items-center justify-center text-white font-bold text-xs shadow-lg overflow-hidden">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
-                      getInitials(post.profiles?.full_name || post.profiles?.username)
+                      <User size={20} className="text-white/40" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -428,7 +428,7 @@ export default function PublicFeed() {
                               {commentAvatar ? (
                                 <img src={commentAvatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               ) : (
-                                getInitials(comment.profiles?.full_name || comment.profiles?.username)
+                                <User size={14} className="text-white/40" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">

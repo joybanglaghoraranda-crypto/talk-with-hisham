@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Send, Loader2, MessageCircle, Share2, Smile, ArrowLeft, Check,
+  Send, Loader2, MessageCircle, Share2, Smile, ArrowLeft, Check, User,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { FEED_EMOJIS } from '@/lib/constants';
-import { formatRelativeTime, getInitials, sanitizeUrl } from '@/lib/utils';
+import { formatRelativeTime, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Post, Comment } from '@/lib/types';
 import Link from 'next/link';
@@ -150,11 +150,11 @@ export default function PostDetailClient({ postId }: { postId: string }) {
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
         {/* Post Header */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-brand-500/20 overflow-hidden">
+          <div className="w-12 h-12 rounded-full bg-surface-300 flex items-center justify-center text-white font-bold text-sm shadow-lg overflow-hidden">
             {avatarUrl ? (
               <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              getInitials(post.profiles?.full_name || post.profiles?.username)
+              <User size={24} className="text-white/40" />
             )}
           </div>
           <div>
@@ -248,7 +248,7 @@ export default function PostDetailClient({ postId }: { postId: string }) {
                     {commentAvatar ? (
                       <img src={commentAvatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
-                      getInitials(comment.profiles?.full_name || comment.profiles?.username)
+                      <User size={14} className="text-white/40" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

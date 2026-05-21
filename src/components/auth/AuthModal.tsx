@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth-store';
 import { X, LogIn, UserPlus, Loader2, Mail, Lock, User, Sparkles, Eye, EyeOff, ShieldCheck, Github } from 'lucide-react';
 import { toast } from 'sonner';
+import { getSupabaseClient } from '@/lib/supabase/client';
+
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -13,7 +15,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { signIn, signUp, signInWithOAuth, signInWithMagicLink } = useAuthStore();
-  const [mode, setMode] = useState<'login' | 'signup' | 'magic'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'magic' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,6 +52,25 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
+    if (mode === 'forgot') {
+      if (!email.trim()) return;
+      setLoading(true);
+      try {
+        const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/settings?reset=true`,
+        });
+        if (error) throw error;
+        toast.success('Password reset link sent! Check your email.');
+        resetForm();
+        onClose();
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to send reset link');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!email.trim() || !password.trim()) return;
 
     if (mode === 'signup') {
@@ -70,7 +91,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
         const { error } = await signUp(email, password, username.trim().toLowerCase(), fullName);
         if (error) throw error;
-        toast.success('Account created! Welcome aboard 🎉');
+        toast.success('Account created! Please check your email to confirm registration and activate your account. 🎉');
       }
       resetForm();
       onClose();
@@ -136,18 +157,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </div>
                   <div>
                     <h2 className="text-xl font-heading font-bold text-white">
-                      {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Magic Link'}
+                      {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : mode === 'magic' ? 'Magic Link' : 'Reset Password'}
                     </h2>
                     <p className="text-white/40 text-sm mt-1">
                       {mode === 'login' ? 'Sign in to continue the discourse'
                         : mode === 'signup' ? 'Fill in your details to get started'
-                        : 'We\'ll email you a login link'}
+                        : mode === 'magic' ? "We'll email you a login link"
+                        : 'Enter your email to receive a password reset link'}
                     </p>
                   </div>
                 </div>
 
                 {/* OAuth Buttons */}
-                {mode !== 'magic' && (
+                {mode !== 'magic' && mode !== 'forgot' && (
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => handleOAuth('google')}
@@ -166,7 +188,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </div>
                 )}
 
-                {mode !== 'magic' && (
+                {mode !== 'magic' && mode !== 'forgot' && (
                   <div className="flex items-center gap-4">
                     <div className="flex-1 h-px bg-white/8" />
                     <span className="text-white/20 text-[10px] uppercase tracking-widest">or</span>
@@ -211,11 +233,22 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       className="w-full bg-white/5 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 outline-none transition-all" required />
                   </div>
 
-                  {mode !== 'magic' && (
+                  {mode !== 'magic' && mode !== 'forgot' && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                        <Lock size={10} /> Password *
-                      </label>
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                          <Lock size={10} /> Password *
+                        </label>
+                        {mode === 'login' && (
+                          <button
+                            type="button"
+                            onClick={() => { setMode('forgot'); resetForm(); }}
+                            className="text-[10px] text-brand-400 hover:text-brand-300 transition-colors"
+                          >
+                            Forgot Password?
+                          </button>
+                        )}
+                      </div>
                       <div className="relative">
                         <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" minLength={6}
                           className="w-full bg-white/5 border border-white/8 rounded-lg px-3 py-2.5 pr-10 text-sm text-white placeholder:text-white/20 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 outline-none transition-all" required />
@@ -256,21 +289,28 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       : mode === 'login' ? <LogIn size={16} />
                       : mode === 'signup' ? <UserPlus size={16} />
                       : <Mail size={16} />}
-                    {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Magic Link'}
+                    {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : mode === 'magic' ? 'Send Magic Link' : 'Send Reset Link'}
                   </button>
                 </form>
 
                 {/* Mode Toggle */}
                 <div className="flex flex-col gap-2">
                   <button
-                    onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); resetForm(); }}
+                    onClick={() => {
+                      if (mode === 'forgot' || mode === 'magic') {
+                        setMode('login');
+                      } else {
+                        setMode(mode === 'login' ? 'signup' : 'login');
+                      }
+                      resetForm();
+                    }}
                     className="w-full py-2.5 rounded-xl border border-white/8 bg-white/3 text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm font-medium"
                   >
                     {mode === 'login' ? "Don't have an account? Create one"
                       : mode === 'signup' ? 'Already have an account? Sign in'
                       : 'Back to Sign In'}
                   </button>
-                  {mode !== 'magic' && (
+                  {mode !== 'magic' && mode !== 'forgot' && (
                     <button
                       onClick={() => { setMode('magic'); resetForm(); }}
                       className="text-[11px] text-white/30 hover:text-brand-400 transition-colors"

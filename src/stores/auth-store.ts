@@ -131,23 +131,14 @@ async function ensureProfile(user: User) {
     if (!data) {
       const emailPrefix = user.email?.split('@')[0] || 'user';
       const username = emailPrefix.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
 
       await supabase.from('profiles').insert({
         id: user.id,
         username: username + '_' + getRandomSuffix(4),
         full_name: user.user_metadata?.full_name || user.user_metadata?.name || emailPrefix,
         bio: '',
-        avatar_url: googleAvatar,
+        avatar_url: '',
       });
-    } else {
-      // Sync Google avatar if profile avatar is empty or already a Google URL, and Google has updated it
-      const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
-      if (googleAvatar && (!data.avatar_url || data.avatar_url.includes('googleusercontent.com'))) {
-        if (data.avatar_url !== googleAvatar) {
-          await supabase.from('profiles').update({ avatar_url: googleAvatar }).eq('id', user.id);
-        }
-      }
     }
   } catch (err) {
     console.log('Profile check:', err);

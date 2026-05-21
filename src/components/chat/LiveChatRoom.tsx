@@ -4,12 +4,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Loader2, ImagePlus, X, Search, Reply, Smile,
-  Users, MessageSquare, ArrowDown,
+  Users, MessageSquare, ArrowDown, User,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { CHAT_EMOJIS } from '@/lib/constants';
-import { formatTimestamp, getDateLabel, uploadFile, getInitials, sanitizeUrl } from '@/lib/utils';
+import { formatTimestamp, getDateLabel, uploadFile, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { ChatMessage } from '@/lib/types';
 
@@ -304,7 +304,7 @@ export default function LiveChatRoom() {
                       {msg.profiles?.avatar_url ? (
                         <img src={sanitizeUrl(msg.profiles.avatar_url)} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
-                        getInitials(msg.profiles?.full_name || msg.profiles?.username)
+                        <User size={16} className="text-white/40" />
                       )}
                     </div>
 

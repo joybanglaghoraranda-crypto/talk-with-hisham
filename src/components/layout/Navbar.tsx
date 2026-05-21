@@ -12,7 +12,7 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { useNotificationStore } from '@/stores/notification-store';
 import AuthModal from '@/components/auth/AuthModal';
-import { cn, formatRelativeTime, getInitials, sanitizeUrl } from '@/lib/utils';
+import { cn, formatRelativeTime, sanitizeUrl } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 export default function Navbar() {
@@ -225,11 +225,11 @@ export default function Navbar() {
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-white/70 hover:text-white"
               >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-[11px] font-bold text-white overflow-hidden">
+                <div className="w-7 h-7 rounded-full bg-surface-300 flex items-center justify-center text-[11px] font-bold text-white overflow-hidden">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    getInitials(displayName)
+                    <User size={14} className="text-white/40" />
                   )}
                 </div>
                 <ChevronDown size={14} className={cn('transition-transform', profileOpen && 'rotate-180')} />
@@ -244,11 +244,11 @@ export default function Navbar() {
                     className="absolute right-0 top-full mt-2 w-52 bg-surface-100/98 backdrop-blur-2xl border border-white/8 rounded-xl shadow-2xl overflow-hidden"
                   >
                     <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-xs font-bold text-white overflow-hidden flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-surface-300 flex items-center justify-center text-xs font-bold text-white overflow-hidden flex-shrink-0">
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
-                          getInitials(displayName)
+                          <User size={18} className="text-white/40" />
                         )}
                       </div>
                       <div className="min-w-0">

@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Settings, MessageCircle, Award, ExternalLink, Sparkles, Heart } from 'lucide-react';
+import { MapPin, Calendar, Settings, MessageCircle, Award, ExternalLink, Sparkles, Heart, Camera, Trash2, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { SOCIAL_LINKS } from '@/lib/constants';
-import { formatRelativeTime, getInitials, sanitizeUrl } from '@/lib/utils';
+import { formatRelativeTime, sanitizeUrl, uploadFile } from '@/lib/utils';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import type { Profile } from '@/lib/types';
 
@@ -76,13 +77,53 @@ export default function ProfilePage({ userId }: { userId?: string }) {
     setCommentCount(count || 0);
   };
 
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB for cover photos'); return; }
+    
+    const loadingToast = toast.loading('Uploading cover photo...');
+    try {
+      const url = await uploadFile(supabase as any, 'media', `covers/${user.id}_${Date.now()}`, file);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ cover_url: url, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setProfile(prev => prev ? { ...prev, cover_url: url } : null);
+      toast.success('Cover photo updated!', { id: loadingToast });
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed', { id: loadingToast });
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!user) return;
+    const loadingToast = toast.loading('Removing cover photo...');
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ cover_url: null, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setProfile(prev => prev ? { ...prev, cover_url: undefined } : null);
+      toast.success('Cover photo removed!', { id: loadingToast });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove cover photo', { id: loadingToast });
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="glass-card p-0 overflow-hidden">
           <div className="h-52 bg-gradient-to-r from-brand-600/10 to-accent-600/10 skeleton" />
           <div className="px-8 pb-8 flex gap-6 items-end -mt-16">
-            <div className="w-32 h-32 rounded-2xl skeleton border-4 border-surface-0" />
+            <div className="w-32 h-32 rounded-full skeleton border-4 border-surface-0" />
             <div className="flex-1 space-y-3 mb-4">
               <div className="h-8 w-48 skeleton rounded-xl" />
               <div className="h-4 w-32 skeleton rounded-lg" />
@@ -97,6 +138,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
 
   const isHisham = profile.username === 'hisham' || profile.id === 'hisham';
   const profileAvatarUrl = profile.avatar_url ? sanitizeUrl(profile.avatar_url) : '';
+  const profileCoverUrl = profile.cover_url ? sanitizeUrl(profile.cover_url) : '';
 
   // For non-admin users, only show comments tab. For admin/hisham show posts too.
   const TABS = isHisham
@@ -110,22 +152,46 @@ export default function ProfilePage({ userId }: { userId?: string }) {
         <div className="absolute -inset-2 bg-gradient-to-r from-brand-500/10 via-accent-500/5 to-brand-500/10 rounded-[2.5rem] blur-2xl opacity-50" />
 
         <div className="relative glass-card p-0 overflow-hidden">
-          <div className="h-48 md:h-56 bg-gradient-to-br from-brand-600/20 via-accent-600/10 to-surface-200 relative overflow-hidden">
-            {isHisham && (
-              <div className="absolute inset-0 bg-[url('/images/hisham.png')] bg-cover bg-center opacity-10 blur-sm" />
+          <div className="h-48 md:h-56 bg-gradient-to-br from-brand-600/20 via-accent-600/10 to-surface-200 relative overflow-hidden group/cover">
+            {profileCoverUrl ? (
+              <img src={profileCoverUrl} alt="Cover" className="w-full h-full object-cover" />
+            ) : (
+              isHisham && (
+                <div className="absolute inset-0 bg-[url('/images/hisham.png')] bg-cover bg-center opacity-10 blur-sm" />
+              )
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-surface-0 via-transparent to-transparent" />
+            
+            {/* Direct Cover Edit Actions */}
+            {isOwnProfile && (
+              <div className="absolute bottom-4 right-4 flex gap-2 z-20">
+                {profileCoverUrl && (
+                  <button
+                    onClick={handleRemoveCover}
+                    className="bg-accent-600/80 hover:bg-accent-600 backdrop-blur-md border border-white/15 text-white text-xs px-3 py-1.5 rounded-lg transition-all hover:scale-105 flex items-center gap-1.5"
+                  >
+                    <Trash2 size={14} />
+                    <span>Remove</span>
+                  </button>
+                )}
+                <label className="bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:scale-105 flex items-center gap-1.5">
+                  <Camera size={14} />
+                  <span>{profileCoverUrl ? 'Change Cover' : 'Upload Cover'}</span>
+                  <input type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" aria-label="Upload cover photo" />
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="px-6 md:px-8 pb-8 relative">
             <div className="flex flex-col md:flex-row gap-5 items-start md:items-end -mt-16 relative z-10">
               <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-br from-brand-500 to-accent-500 rounded-2xl opacity-60 blur-sm" />
-                <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-surface-300 border-4 border-surface-0 flex items-center justify-center text-4xl font-heading font-bold text-brand-400 overflow-hidden">
+                <div className="absolute -inset-1 bg-gradient-to-br from-brand-500 to-accent-500 rounded-full opacity-60 blur-sm" />
+                <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full bg-surface-300 border-4 border-surface-0 flex items-center justify-center text-4xl font-heading font-bold text-brand-400 overflow-hidden">
                   {profileAvatarUrl ? (
                     <img src={profileAvatarUrl} alt={profile.username} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    getInitials(profile.full_name || profile.username)
+                    <User className="text-white/20 w-16 h-16" />
                   )}
                 </div>
               </div>
