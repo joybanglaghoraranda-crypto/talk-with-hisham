@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
   Send, Loader2, ImagePlus, X, Search, Reply, Smile,
-  Users, MessageSquare, ArrowDown, User,
+  Users, MessageSquare, ArrowDown, User, Copy, Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -23,6 +23,7 @@ export default function LiveChatRoom() {
   const [showSearch, setShowSearch] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [activeEmoji, setActiveEmoji] = useState<string | null>(null);
+  const [activeMenuMessage, setActiveMenuMessage] = useState<ChatMessage | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -194,6 +195,17 @@ export default function LiveChatRoom() {
     await supabase.from('messages').update({ reactions }).eq('id', msgId);
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      const { error } = await supabase.from('messages').delete().eq('id', msgId);
+      if (error) throw error;
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      toast.success('Message deleted successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete message');
+    }
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -308,6 +320,7 @@ export default function LiveChatRoom() {
                     setReplyTo={setReplyTo}
                     handleReaction={handleReaction}
                     replyMsg={replyMsg}
+                    onOpenMenu={setActiveMenuMessage}
                   />
                 </div>
               );
@@ -387,6 +400,128 @@ export default function LiveChatRoom() {
           {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>
+
+      {/* Mobile/Desktop Message Action Menu (Bottom Drawer / Modal Overlay) */}
+      <AnimatePresence>
+        {activeMenuMessage && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setActiveMenuMessage(null)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end md:items-center justify-center"
+            >
+              {/* Drawer Container */}
+              <motion.div
+                initial={{ y: '100%', scale: 1 }}
+                animate={{ y: 0, scale: 1 }}
+                exit={{ y: '100%', scale: 0.95 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full md:max-w-md bg-surface-200/95 backdrop-blur-xl border-t md:border border-white/10 rounded-t-2xl md:rounded-2xl p-4 shadow-2xl z-50 max-h-[85vh] overflow-y-auto"
+              >
+                {/* Drag Handle for Mobile */}
+                <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-4 md:hidden" />
+
+                {/* Sender Header info */}
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
+                  <div className="w-9 h-9 rounded-full bg-surface-300 flex items-center justify-center text-xs font-bold text-white/40 overflow-hidden">
+                    {activeMenuMessage.profiles?.avatar_url ? (
+                      <img src={sanitizeUrl(activeMenuMessage.profiles.avatar_url)} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={18} className="text-white/40" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold text-white/80 truncate">
+                      {activeMenuMessage.profiles?.full_name || activeMenuMessage.profiles?.username || 'user'}
+                    </div>
+                    <div className="text-[10px] text-white/35 truncate mt-0.5">
+                      {activeMenuMessage.content}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setActiveMenuMessage(null)} 
+                    className="p-1.5 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Emojis Reaction Row */}
+                <div className="mb-4">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-white/30 block mb-2 px-1">Reactions</span>
+                  <div className="flex items-center justify-between bg-white/3 border border-white/5 rounded-xl p-2 overflow-x-auto gap-2 scrollbar-none">
+                    {CHAT_EMOJIS.map((emoji) => {
+                      const isReacted = ((activeMenuMessage.reactions?.[emoji] || []) as string[]).includes(user.id);
+                      return (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            handleReaction(activeMenuMessage.id, emoji);
+                            setActiveMenuMessage(null);
+                          }}
+                          className={`text-2xl p-2 rounded-lg hover:bg-white/5 active:scale-125 transition-all flex-1 min-w-[40px] flex justify-center items-center ${
+                            isReacted ? 'bg-brand-500/20 border border-brand-500/30' : 'border border-transparent'
+                          }`}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Actions Menu */}
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-white/30 block mb-2 px-1">Actions</span>
+                  
+                  {/* Reply Action */}
+                  <button
+                    onClick={() => {
+                      setReplyTo(activeMenuMessage);
+                      setActiveMenuMessage(null);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all text-sm font-medium"
+                  >
+                    <Reply size={16} className="text-brand-400" />
+                    Reply
+                  </button>
+
+                  {/* Copy Action */}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(activeMenuMessage.content);
+                      toast.success('Message copied to clipboard');
+                      setActiveMenuMessage(null);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all text-sm font-medium"
+                  >
+                    <Copy size={16} className="text-blue-400" />
+                    Copy Text
+                  </button>
+
+                  {/* Delete Action (Conditional) */}
+                  {activeMenuMessage.sender_id === user.id && (
+                    <button
+                      onClick={() => {
+                        handleDeleteMessage(activeMenuMessage.id);
+                        setActiveMenuMessage(null);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all text-sm font-medium"
+                    >
+                      <Trash2 size={16} />
+                      Delete Message
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -399,6 +534,7 @@ interface ChatMessageItemProps {
   setReplyTo: (msg: ChatMessage) => void;
   handleReaction: (msgId: string, emoji: string) => Promise<void>;
   replyMsg: ChatMessage | undefined;
+  onOpenMenu: (msg: ChatMessage) => void;
 }
 
 function ChatMessageItem({
@@ -409,6 +545,7 @@ function ChatMessageItem({
   setReplyTo,
   handleReaction,
   replyMsg,
+  onOpenMenu,
 }: ChatMessageItemProps) {
   const x = useMotionValue(0);
   const opacity = useTransform(x, [0, -60], [0, 1]);
@@ -447,6 +584,7 @@ function ChatMessageItem({
         <div
           className="w-8 h-8 rounded-full bg-surface-300 flex items-center justify-center text-[10px] font-bold text-white/40 flex-shrink-0 mt-0.5 overflow-hidden pointer-events-auto"
           onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {msg.profiles?.avatar_url ? (
             <img src={sanitizeUrl(msg.profiles.avatar_url)} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -455,16 +593,20 @@ function ChatMessageItem({
           )}
         </div>
 
-        <div className="flex-1 min-w-0 pointer-events-auto">
+        <div 
+          className="flex-1 min-w-0 pointer-events-auto cursor-pointer"
+          onClick={() => onOpenMenu(msg)}
+        >
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-white/80">
               {msg.profiles?.full_name || msg.profiles?.username || 'user'}
             </span>
             <span className="text-[10px] text-white/15">{formatTimestamp(msg.created_at)}</span>
 
-            {/* Hover actions */}
+            {/* Hover / tap actions */}
             <div
-              className="ml-auto flex items-center gap-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity"
+              className="ml-auto flex items-center gap-0.5 opacity-40 md:opacity-0 group-hover/item:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
             >
               <button onClick={() => setReplyTo(msg)} className="p-1 rounded hover:bg-white/10 text-white/20 hover:text-white transition-colors" title="Reply">
@@ -488,12 +630,22 @@ function ChatMessageItem({
           <p className="text-[13px] text-white/65 leading-relaxed break-words">{msg.content}</p>
 
           {msg.image_url && (
-            <img src={sanitizeUrl(msg.image_url)} alt="Attachment" className="mt-2 max-h-60 rounded-xl border border-white/5" loading="lazy" />
+            <img 
+              src={sanitizeUrl(msg.image_url)} 
+              alt="Attachment" 
+              className="mt-2 max-h-60 rounded-xl border border-white/5" 
+              loading="lazy" 
+              onClick={(e) => e.stopPropagation()}
+            />
           )}
 
           {/* Reactions */}
           {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5" onPointerDown={(e) => e.stopPropagation()}>
+            <div 
+              className="flex flex-wrap gap-1 mt-1.5" 
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
               {Object.entries(msg.reactions).map(([emoji, users]) => (
                 <button
                   key={emoji}
@@ -518,6 +670,7 @@ function ChatMessageItem({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="flex gap-1 mt-1.5 bg-surface-200 border border-white/8 rounded-lg p-1.5 w-fit"
+                onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 {CHAT_EMOJIS.map((emoji) => (
@@ -533,4 +686,3 @@ function ChatMessageItem({
     </div>
   );
 }
-
