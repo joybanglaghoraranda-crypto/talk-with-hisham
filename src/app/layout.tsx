@@ -35,6 +35,18 @@ export const metadata: Metadata = {
   verification: {
     google: 'qLpGYU0kNvVtbbOh9PLKEZGndZmu3LiqbmX0orkqCFM',
   },
+  keywords: [
+    'Talk with Hisham',
+    'Hisham',
+    'Muhibbullah Hisham',
+    'Conversations',
+    'Opinions',
+    'Connection',
+    'debates',
+    'intellectual discourse',
+    'talkwithhisham',
+    'twhisham'
+  ],
   other: {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
@@ -49,6 +61,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              'name': 'Talk with Hisham',
+              'alternateName': ['Talk With Hisham', 'Hisham', 'TWH', 'talkwithhisham', 'twhisham'],
+              'url': 'https://twhisham.vercel.app',
+            }),
+          }}
+        />
+      </head>
       <body className="relative min-h-screen bg-surface-0 text-white overflow-x-hidden">
         <Providers>
           <Navbar />
