@@ -9,7 +9,7 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { FEED_EMOJIS, ADMIN_EMAIL } from '@/lib/constants';
-import { formatRelativeTime, uploadFile, getInitials } from '@/lib/utils';
+import { formatRelativeTime, uploadFile, getInitials, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Post, Comment } from '@/lib/types';
 
@@ -210,7 +210,7 @@ export default function PublicFeed() {
           />
           {postImagePreview && (
             <div className="relative mt-3 inline-block">
-              <img src={postImagePreview} alt="Preview" className="max-h-48 rounded-xl border border-white/8" />
+              <img src={sanitizeUrl(postImagePreview)} alt="Preview" className="max-h-48 rounded-xl border border-white/8" />
               <button onClick={() => { setPostImage(null); setPostImagePreview(null); }} className="absolute -top-2 -right-2 bg-surface-200 border border-white/8 p-1.5 rounded-full text-white/40 hover:text-white" title="Remove image">
                 <X size={12} />
               </button>
@@ -296,7 +296,7 @@ export default function PublicFeed() {
 
                 {post.image_url && (
                   <div className="mb-3 rounded-xl overflow-hidden border border-white/5">
-                    <img src={post.image_url} alt="Post attachment" className="w-full max-h-96 object-cover" loading="lazy" />
+                    <img src={sanitizeUrl(post.image_url)} alt="Post attachment" className="w-full max-h-96 object-cover" loading="lazy" />
                   </div>
                 )}
 

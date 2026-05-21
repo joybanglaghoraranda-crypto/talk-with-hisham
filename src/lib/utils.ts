@@ -82,3 +82,14 @@ export async function uploadFile(
   const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path);
   return publicUrl;
 }
+
+export function sanitizeUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  // Only allow http, https, blob, data:image
+  if (/^(https?:\/\/|blob:|data:image\/)/i.test(trimmed)) {
+    return trimmed;
+  }
+  return '';
+}
+

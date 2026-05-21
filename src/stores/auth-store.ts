@@ -134,7 +134,7 @@ async function ensureProfile(user: User) {
 
       await supabase.from('profiles').insert({
         id: user.id,
-        username: username + '_' + Math.random().toString(36).slice(2, 6),
+        username: username + '_' + getRandomSuffix(4),
         full_name: user.user_metadata?.full_name || emailPrefix,
         bio: '',
         avatar_url: user.user_metadata?.avatar_url || '',
@@ -144,3 +144,16 @@ async function ensureProfile(user: User) {
     console.log('Profile check:', err);
   }
 }
+
+function getRandomSuffix(length = 4): string {
+  const array = new Uint32Array(1);
+  if (typeof window !== 'undefined' && window.crypto) {
+    window.crypto.getRandomValues(array);
+  } else if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+    globalThis.crypto.getRandomValues(array);
+  } else {
+    return Date.now().toString(36).slice(-length);
+  }
+  return array[0].toString(36).slice(0, length);
+}
+

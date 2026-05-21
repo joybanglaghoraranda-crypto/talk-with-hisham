@@ -9,7 +9,7 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { CHAT_EMOJIS } from '@/lib/constants';
-import { formatTimestamp, getDateLabel, uploadFile, getInitials } from '@/lib/utils';
+import { formatTimestamp, getDateLabel, uploadFile, getInitials, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { ChatMessage } from '@/lib/types';
 
@@ -334,7 +334,7 @@ export default function LiveChatRoom() {
                       <p className="text-[13px] text-white/65 leading-relaxed break-words">{msg.content}</p>
 
                       {msg.image_url && (
-                        <img src={msg.image_url} alt="Attachment" className="mt-2 max-h-60 rounded-xl border border-white/5" loading="lazy" />
+                        <img src={sanitizeUrl(msg.image_url)} alt="Attachment" className="mt-2 max-h-60 rounded-xl border border-white/5" loading="lazy" />
                       )}
 
                       {/* Reactions */}
@@ -423,7 +423,7 @@ export default function LiveChatRoom() {
       {/* Image Preview */}
       {imagePreview && (
         <div className="relative inline-block mt-2">
-          <img src={imagePreview} alt="Preview" className="max-h-24 rounded-lg border border-white/8" />
+          <img src={sanitizeUrl(imagePreview)} alt="Preview" className="max-h-24 rounded-lg border border-white/8" />
           <button onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute -top-1.5 -right-1.5 bg-surface-200 border border-white/8 p-1 rounded-full text-white/40 hover:text-white" title="Remove image">
             <X size={10} />
           </button>
