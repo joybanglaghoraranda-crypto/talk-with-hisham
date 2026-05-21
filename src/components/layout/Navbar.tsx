@@ -12,7 +12,8 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { useNotificationStore } from '@/stores/notification-store';
 import AuthModal from '@/components/auth/AuthModal';
-import { cn, formatRelativeTime } from '@/lib/utils';
+import { cn, formatRelativeTime, getInitials, sanitizeUrl } from '@/lib/utils';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
 export default function Navbar() {
   const { user, isAdmin, signOut } = useAuthStore();
@@ -23,6 +24,7 @@ export default function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [profileData, setProfileData] = useState<{ full_name: string; avatar_url: string; username: string } | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -32,6 +34,14 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Fetch profile data for avatar and name
+  useEffect(() => {
+    if (!user) { setProfileData(null); return; }
+    const supabase = getSupabaseClient();
+    supabase.from('profiles').select('full_name, avatar_url, username').eq('id', user.id).single()
+      .then(({ data }) => { if (data) setProfileData(data); });
+  }, [user]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -73,6 +83,9 @@ export default function Navbar() {
       default: return <Sparkles size={13} className="text-purple-400" />;
     }
   };
+
+  const displayName = profileData?.full_name || profileData?.username || user?.email?.split('@')[0] || 'User';
+  const avatarUrl = profileData?.avatar_url ? sanitizeUrl(profileData.avatar_url) : '';
 
   return (
     <>
@@ -212,8 +225,12 @@ export default function Navbar() {
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-white/70 hover:text-white"
               >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-[11px] font-bold text-white">
-                  {user.email?.[0]?.toUpperCase() || 'U'}
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-[11px] font-bold text-white overflow-hidden">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    getInitials(displayName)
+                  )}
                 </div>
                 <ChevronDown size={14} className={cn('transition-transform', profileOpen && 'rotate-180')} />
               </button>
@@ -226,9 +243,18 @@ export default function Navbar() {
                     exit={{ opacity: 0, y: -8, scale: 0.95 }}
                     className="absolute right-0 top-full mt-2 w-52 bg-surface-100/98 backdrop-blur-2xl border border-white/8 rounded-xl shadow-2xl overflow-hidden"
                   >
-                    <div className="px-4 py-3 border-b border-white/5">
-                      <p className="text-xs font-semibold text-white truncate">{user.email}</p>
-                      <p className="text-[10px] text-white/30 mt-0.5">{isAdmin ? 'Administrator' : 'Member'}</p>
+                    <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-xs font-bold text-white overflow-hidden flex-shrink-0">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          getInitials(displayName)
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-white truncate">{displayName}</p>
+                        <p className="text-[10px] text-white/30 mt-0.5">{isAdmin ? 'Administrator' : 'Member'}</p>
+                      </div>
                     </div>
                     <div className="py-1">
                       <Link href="/profile" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">

@@ -86,10 +86,9 @@ export async function uploadFile(
 export function sanitizeUrl(url: string | null | undefined): string {
   if (!url) return '';
   const trimmed = url.trim();
-  // Only allow http, https, blob, data:image
-  if (/^(https?:\/\/|blob:|data:image\/)/i.test(trimmed)) {
+  // Only allow http, https, blob, data:image, and relative paths
+  if (/^(https?:\/\/|blob:|data:image\/|\/[a-zA-Z])/i.test(trimmed)) {
     return trimmed;
   }
   return '';
 }
-

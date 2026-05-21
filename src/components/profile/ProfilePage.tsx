@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Settings, BookOpen, MessageCircle, Award, ExternalLink, Sparkles, Heart } from 'lucide-react';
+import { MapPin, Calendar, Settings, MessageCircle, Award, ExternalLink, Sparkles, Heart } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { SOCIAL_LINKS } from '@/lib/constants';
-import { formatRelativeTime, getInitials } from '@/lib/utils';
+import { formatRelativeTime, getInitials, sanitizeUrl } from '@/lib/utils';
 import Link from 'next/link';
 import type { Profile } from '@/lib/types';
 
-const DEFAULT_PROFILE: Profile = {
+const HISHAM_PROFILE: Profile = {
   id: 'hisham',
   username: 'hisham',
   full_name: 'Muhibbullah Hisham',
@@ -24,7 +24,8 @@ export default function ProfilePage({ userId }: { userId?: string }) {
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<{ id: string; content: string; likes_count: number; created_at: string }[]>([]);
-  const [activeTab, setActiveTab] = useState('posts');
+  const [commentCount, setCommentCount] = useState(0);
+  const [activeTab, setActiveTab] = useState('comments');
   const supabase = getSupabaseClient();
 
   useEffect(() => {
@@ -40,15 +41,18 @@ export default function ProfilePage({ userId }: { userId?: string }) {
         const { data } = await supabase.from('profiles').select('*').eq('id', targetId).single();
         if (data) {
           setProfile(data);
+          const isHish = data.username === 'hisham' || data.id === 'hisham';
+          setActiveTab(isHish ? 'posts' : 'comments');
           fetchPosts(targetId);
+          fetchCommentCount(targetId);
           setLoading(false);
           return;
         }
       }
-      setProfile(DEFAULT_PROFILE);
+      setProfile(HISHAM_PROFILE);
       setIsOwnProfile(false);
     } catch {
-      setProfile(DEFAULT_PROFILE);
+      setProfile(HISHAM_PROFILE);
     } finally {
       setLoading(false);
     }
@@ -62,6 +66,14 @@ export default function ProfilePage({ userId }: { userId?: string }) {
       .order('created_at', { ascending: false })
       .limit(20);
     if (data) setPosts(data);
+  };
+
+  const fetchCommentCount = async (profileId: string) => {
+    const { count } = await supabase
+      .from('comments')
+      .select('id', { count: 'exact', head: true })
+      .eq('author_id', profileId);
+    setCommentCount(count || 0);
   };
 
   if (loading) {
@@ -83,7 +95,13 @@ export default function ProfilePage({ userId }: { userId?: string }) {
 
   if (!profile) return <div className="text-center p-12 text-white/30">Profile not found.</div>;
 
-  const TABS = ['posts', 'conversations', 'replies'];
+  const isHisham = profile.username === 'hisham' || profile.id === 'hisham';
+  const profileAvatarUrl = profile.avatar_url ? sanitizeUrl(profile.avatar_url) : '';
+
+  // For non-admin users, only show comments tab. For admin/hisham show posts too.
+  const TABS = isHisham
+    ? ['posts', 'comments', 'conversations']
+    : ['comments', 'conversations'];
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-6">
@@ -93,7 +111,9 @@ export default function ProfilePage({ userId }: { userId?: string }) {
 
         <div className="relative glass-card p-0 overflow-hidden">
           <div className="h-48 md:h-56 bg-gradient-to-br from-brand-600/20 via-accent-600/10 to-surface-200 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/images/hisham.png')] bg-cover bg-center opacity-10 blur-sm" />
+            {isHisham && (
+              <div className="absolute inset-0 bg-[url('/images/hisham.png')] bg-cover bg-center opacity-10 blur-sm" />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-surface-0 via-transparent to-transparent" />
           </div>
 
@@ -102,8 +122,8 @@ export default function ProfilePage({ userId }: { userId?: string }) {
               <div className="relative">
                 <div className="absolute -inset-1 bg-gradient-to-br from-brand-500 to-accent-500 rounded-2xl opacity-60 blur-sm" />
                 <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-surface-300 border-4 border-surface-0 flex items-center justify-center text-4xl font-heading font-bold text-brand-400 overflow-hidden">
-                  {profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+                  {profileAvatarUrl ? (
+                    <img src={profileAvatarUrl} alt={profile.username} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     getInitials(profile.full_name || profile.username)
                   )}
@@ -113,7 +133,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">{profile.full_name || profile.username}</h1>
-                  {!isOwnProfile && (
+                  {isHisham && (
                     <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
                       <Sparkles size={10} className="text-white" />
                     </div>
@@ -145,7 +165,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
               <div className="flex flex-wrap gap-4 text-white/25 text-xs">
                 <div className="flex items-center gap-1.5"><MapPin size={12} /> Bangladesh</div>
                 <div className="flex items-center gap-1.5"><Calendar size={12} /> Joined May 2026</div>
-                {!isOwnProfile && (
+                {isHisham && (
                   <a href="https://t.me/twhisham" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-brand-400 transition-colors">
                     <ExternalLink size={12} /> t.me/twhisham
                   </a>
@@ -156,7 +176,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-3 mt-5">
               {[
-                { label: 'Posts', value: posts.length, icon: BookOpen },
+                { label: 'Comments', value: commentCount, icon: MessageCircle },
                 { label: 'Conversations', value: '—', icon: MessageCircle },
                 { label: 'Contributions', value: '—', icon: Award },
               ].map((stat) => (
@@ -191,12 +211,12 @@ export default function ProfilePage({ userId }: { userId?: string }) {
           <div className="space-y-3">
             {posts.length === 0 ? (
               <div className="glass-card py-12 text-center">
-                <BookOpen className="mx-auto text-white/10 mb-3" size={36} />
+                <MessageCircle className="mx-auto text-white/10 mb-3" size={36} />
                 <p className="text-white/20 text-sm">No posts yet.</p>
               </div>
             ) : (
               posts.map((post) => (
-                <div key={post.id} className="glass-card glass-card-hover p-5">
+                <Link key={post.id} href={`/feed/post/${post.id}`} className="block glass-card glass-card-hover p-5">
                   <p className="text-white/65 leading-relaxed text-[14px]">{post.content}</p>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
                     <span className="text-white/20 text-xs">{formatRelativeTime(post.created_at)}</span>
@@ -204,16 +224,23 @@ export default function ProfilePage({ userId }: { userId?: string }) {
                       <Heart size={12} className="text-accent-400" /> {post.likes_count}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>
         )}
 
-        {activeTab !== 'posts' && (
+        {activeTab === 'comments' && (
           <div className="glass-card py-12 text-center">
             <MessageCircle className="mx-auto text-white/10 mb-3" size={36} />
-            <p className="text-white/20 text-sm">No {activeTab} to show yet.</p>
+            <p className="text-white/20 text-sm">{commentCount > 0 ? `${commentCount} comments made` : 'No comments yet.'}</p>
+          </div>
+        )}
+
+        {activeTab === 'conversations' && (
+          <div className="glass-card py-12 text-center">
+            <MessageCircle className="mx-auto text-white/10 mb-3" size={36} />
+            <p className="text-white/20 text-sm">No conversations to show yet.</p>
           </div>
         )}
       </div>

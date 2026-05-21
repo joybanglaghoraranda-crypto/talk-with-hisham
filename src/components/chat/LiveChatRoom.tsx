@@ -41,7 +41,7 @@ export default function LiveChatRoom() {
     try {
       const { data } = await supabase
         .from('messages')
-        .select('*, profiles(username, avatar_url)')
+        .select('*, profiles(username, full_name, avatar_url)')
         .order('created_at', { ascending: true })
         .limit(200);
       setMessages(data || []);
@@ -71,7 +71,7 @@ export default function LiveChatRoom() {
         // Fetch profile info for the new message
         supabase
           .from('profiles')
-          .select('username, avatar_url')
+          .select('username, full_name, avatar_url')
           .eq('id', newMsg.sender_id)
           .single()
           .then(({ data }) => {
@@ -138,7 +138,7 @@ export default function LiveChatRoom() {
         reply_to: replyTo?.id || null,
         reactions: {},
         created_at: new Date().toISOString(),
-        profiles: { username: user.email?.split('@')[0] || 'user', avatar_url: '' },
+        profiles: { username: user.email?.split('@')[0] || 'user', full_name: '', avatar_url: '' },
       };
 
       setMessages((prev) => [...prev, optimistic]);
@@ -300,14 +300,18 @@ export default function LiveChatRoom() {
                     animate={{ opacity: 1, x: 0 }}
                     className="group flex gap-2.5 py-1.5 hover:bg-white/[0.02] rounded-lg px-2 -mx-2 transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-surface-300 flex items-center justify-center text-[10px] font-bold text-white/40 flex-shrink-0 mt-0.5">
-                      {getInitials(msg.profiles?.username)}
+                    <div className="w-8 h-8 rounded-full bg-surface-300 flex items-center justify-center text-[10px] font-bold text-white/40 flex-shrink-0 mt-0.5 overflow-hidden">
+                      {msg.profiles?.avatar_url ? (
+                        <img src={sanitizeUrl(msg.profiles.avatar_url)} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        getInitials(msg.profiles?.full_name || msg.profiles?.username)
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-white/80">
-                          {msg.profiles?.username || 'user'}
+                          {msg.profiles?.full_name || msg.profiles?.username || 'user'}
                         </span>
                         <span className="text-[10px] text-white/15">{formatTimestamp(msg.created_at)}</span>
 

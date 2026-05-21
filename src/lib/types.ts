@@ -34,6 +34,7 @@ export interface Comment {
   created_at: string;
   profiles?: {
     username: string;
+    full_name: string;
     avatar_url: string;
   };
 }
@@ -48,6 +49,7 @@ export interface ChatMessage {
   reply_to?: string | null;
   profiles?: {
     username: string;
+    full_name: string;
     avatar_url: string;
   };
 }

@@ -28,7 +28,11 @@ export const metadata: Metadata = {
       'Join the conversation. A space for deep conversations, real-time opinions, and cross-platform connection.',
   },
   icons: {
-    icon: '/icon.png',
+    icon: [
+      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+    ],
+    shortcut: '/favicon.ico',
     apple: '/icon.png',
   },
   manifest: '/manifest.json',

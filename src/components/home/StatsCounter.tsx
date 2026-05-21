@@ -2,23 +2,45 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Users, MessageSquare, Rss, Globe } from 'lucide-react';
+import { Users, MessageSquare, Rss } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 interface StatItem {
   label: string;
-  value: number;
+  value: number | null;
   suffix?: string;
   icon: React.FC<{ size?: number; className?: string }>;
   color: string;
 }
 
-function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
+const CACHE_KEY = 'twh_stats_cache';
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCachedStats(): { values: [number, number, number]; ts: number } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.ts < CACHE_TTL) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedStats(values: [number, number, number]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ values, ts: Date.now() }));
+  } catch { /* ignore */ }
+}
+
+function AnimatedCounter({ target, suffix = '' }: { target: number | null; suffix?: string }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
+    if (target === null || target === 0) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAnimated) {
@@ -41,21 +63,26 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
     return () => observer.disconnect();
   }, [target, hasAnimated]);
 
+  if (target === null) return <span ref={ref}>—</span>;
+  if (target === 0) return <span ref={ref}>—</span>;
+
   return <span ref={ref}>{count}{suffix}</span>;
 }
 
 export default function StatsCounter() {
+  const cached = getCachedStats();
   const [stats, setStats] = useState<StatItem[]>([
-    { label: 'Active Users', value: 0, suffix: '+', icon: Users, color: 'from-brand-500 to-brand-300' },
-    { label: 'Messages Sent', value: 0, suffix: '+', icon: MessageSquare, color: 'from-accent-500 to-accent-400' },
-    { label: 'Feed Posts', value: 0, suffix: '', icon: Rss, color: 'from-violet-500 to-purple-400' },
+    { label: 'Active Users', value: cached?.values[0] ?? null, suffix: '+', icon: Users, color: 'from-brand-500 to-brand-300' },
+    { label: 'Messages Sent', value: cached?.values[1] ?? null, suffix: '+', icon: MessageSquare, color: 'from-accent-500 to-accent-400' },
+    { label: 'Feed Posts', value: cached?.values[2] ?? null, suffix: '', icon: Rss, color: 'from-violet-500 to-purple-400' },
   ]);
+  const [fetched, setFetched] = useState(!!cached);
 
   useEffect(() => {
     fetchStats();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (attempt = 0) => {
     try {
       const supabase = getSupabaseClient();
       const [profilesRes, messagesRes, postsRes] = await Promise.all([
@@ -64,13 +91,28 @@ export default function StatsCounter() {
         supabase.from('posts').select('id', { count: 'exact', head: true }),
       ]);
 
-      setStats((prev) => [
-        { ...prev[0], value: profilesRes.count || 0 },
-        { ...prev[1], value: messagesRes.count || 0 },
-        { ...prev[2], value: postsRes.count || 0 },
-      ]);
+      const values: [number, number, number] = [
+        profilesRes.count || 0,
+        messagesRes.count || 0,
+        postsRes.count || 0,
+      ];
+
+      // Only update if we actually got real data
+      if (values[0] > 0 || values[1] > 0 || values[2] > 0) {
+        setCachedStats(values);
+        setStats((prev) => [
+          { ...prev[0], value: values[0] },
+          { ...prev[1], value: values[1] },
+          { ...prev[2], value: values[2] },
+        ]);
+      }
+      setFetched(true);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
+      // Retry up to 2 times with exponential backoff
+      if (attempt < 2) {
+        setTimeout(() => fetchStats(attempt + 1), 1000 * Math.pow(2, attempt));
+      }
     }
   };
 
@@ -98,7 +140,11 @@ export default function StatsCounter() {
               <stat.icon size={16} className="text-white" />
             </div>
             <p className="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">
-              <AnimatedCounter target={stat.value} suffix={stat.suffix} />
+              {!fetched && stat.value === null ? (
+                <span className="inline-block w-16 h-8 skeleton rounded-lg" />
+              ) : (
+                <AnimatedCounter target={stat.value} suffix={stat.suffix} />
+              )}
             </p>
             <p className="text-[10px] uppercase tracking-widest text-white/25 font-semibold mt-1">{stat.label}</p>
           </div>

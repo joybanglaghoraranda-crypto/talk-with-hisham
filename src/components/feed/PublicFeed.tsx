@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, Loader2, ImagePlus, X, Heart, MessageCircle, Trash2, Share2, Pin,
-  MoreHorizontal, Smile, BookOpen,
+  Send, Loader2, ImagePlus, X, MessageCircle, Trash2, Share2,
+  Smile, BookOpen, Link2, Check,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { FEED_EMOJIS, ADMIN_EMAIL } from '@/lib/constants';
+import { FEED_EMOJIS } from '@/lib/constants';
 import { formatRelativeTime, uploadFile, getInitials, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Post, Comment } from '@/lib/types';
+import Link from 'next/link';
 
 export default function PublicFeed() {
   const { user, isAdmin } = useAuthStore();
@@ -23,8 +24,10 @@ export default function PublicFeed() {
   const [posting, setPosting] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [newComments, setNewComments] = useState<Record<string, string>>({});
   const [activeEmoji, setActiveEmoji] = useState<string | null>(null);
+  const [copiedPostId, setCopiedPostId] = useState<string | null>(null);
   const supabase = getSupabaseClient();
 
   const fetchPosts = useCallback(async () => {
@@ -36,6 +39,22 @@ export default function PublicFeed() {
         .limit(30);
       if (error) throw error;
       setPosts(data || []);
+
+      // Fetch comment counts for all posts
+      if (data && data.length > 0) {
+        const postIds = data.map((p: Post) => p.id);
+        const { data: countData } = await supabase
+          .from('comments')
+          .select('post_id')
+          .in('post_id', postIds);
+        if (countData) {
+          const counts: Record<string, number> = {};
+          countData.forEach((c: { post_id: string }) => {
+            counts[c.post_id] = (counts[c.post_id] || 0) + 1;
+          });
+          setCommentCounts(counts);
+        }
+      }
     } catch (err) {
       console.error('Error fetching posts:', err);
     } finally {
@@ -103,11 +122,6 @@ export default function PublicFeed() {
     await supabase.from('posts').update({ reactions }).eq('id', postId);
   };
 
-  const handleLike = async (postId: string) => {
-    if (!user) return;
-    await handleReaction(postId, '❤️');
-  };
-
   const handleDelete = async (postId: string) => {
     if (!isAdmin) return;
     const confirmed = window.confirm('Delete this post?');
@@ -120,10 +134,13 @@ export default function PublicFeed() {
   const fetchComments = async (postId: string) => {
     const { data } = await supabase
       .from('comments')
-      .select('*, profiles(username, avatar_url)')
+      .select('*, profiles(username, full_name, avatar_url)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
     setComments((prev) => ({ ...prev, [postId]: data || [] }));
+    if (data) {
+      setCommentCounts((prev) => ({ ...prev, [postId]: data.length }));
+    }
   };
 
   const toggleComments = (postId: string) => {
@@ -154,6 +171,35 @@ export default function PublicFeed() {
     fetchComments(postId);
   };
 
+  const handleShare = async (post: Post) => {
+    const postUrl = `${window.location.origin}/feed/post/${post.id}`;
+    const shareText = post.content.slice(0, 100) + (post.content.length > 100 ? '...' : '');
+
+    // Try Web Share API first
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Talk with Hisham',
+          text: shareText,
+          url: postUrl,
+        });
+        return;
+      } catch {
+        // User cancelled or Share API failed, fall through to clipboard
+      }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(postUrl);
+      setCopiedPostId(post.id);
+      toast.success('Post link copied!');
+      setTimeout(() => setCopiedPostId(null), 2000);
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -172,10 +218,6 @@ export default function PublicFeed() {
 
   const hasReacted = (post: Post, emoji: string) => {
     return user ? (post.reactions?.[emoji] || []).includes(user.id) : false;
-  };
-
-  const totalLikes = (post: Post) => {
-    return Object.values(post.reactions || {}).reduce((sum, arr) => sum + arr.length, 0);
   };
 
   if (!user) {
@@ -259,7 +301,9 @@ export default function PublicFeed() {
       ) : (
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
-            {posts.map((post) => (
+            {posts.map((post) => {
+              const avatarUrl = post.profiles?.avatar_url ? sanitizeUrl(post.profiles.avatar_url) : '';
+              return (
               <motion.div
                 key={post.id}
                 layout
@@ -270,8 +314,12 @@ export default function PublicFeed() {
               >
                 {/* Post Header */}
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-brand-500/20">
-                    {getInitials(post.profiles?.full_name || post.profiles?.username)}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-brand-500/20 overflow-hidden">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      getInitials(post.profiles?.full_name || post.profiles?.username)
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -292,12 +340,14 @@ export default function PublicFeed() {
                 </div>
 
                 {/* Post Content */}
-                <p className="text-white/75 leading-relaxed text-[15px] mb-3 whitespace-pre-wrap">{post.content}</p>
+                <Link href={`/feed/post/${post.id}`} className="block">
+                  <p className="text-white/75 leading-relaxed text-[15px] mb-3 whitespace-pre-wrap">{post.content}</p>
+                </Link>
 
                 {post.image_url && (
-                  <div className="mb-3 rounded-xl overflow-hidden border border-white/5">
+                  <Link href={`/feed/post/${post.id}`} className="block mb-3 rounded-xl overflow-hidden border border-white/5">
                     <img src={sanitizeUrl(post.image_url)} alt="Post attachment" className="w-full max-h-96 object-cover" loading="lazy" />
-                  </div>
+                  </Link>
                 )}
 
                 {/* Reactions */}
@@ -323,16 +373,16 @@ export default function PublicFeed() {
                   })}
                 </div>
 
-                {/* Actions */}
+                {/* Actions: React, Comment, Share */}
                 <div className="flex items-center gap-1 pt-2 border-t border-white/5">
-                  <button onClick={() => handleLike(post.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${hasReacted(post, '❤️') ? 'text-accent-400 bg-accent-500/10' : 'text-white/30 hover:text-accent-400 hover:bg-white/5'}`}>
-                    <Heart size={14} fill={hasReacted(post, '❤️') ? 'currentColor' : 'none'} /> {totalLikes(post) || ''}
+                  <button onClick={() => setActiveEmoji(activeEmoji === post.id ? null : post.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all" title="React">
+                    <Smile size={14} /> React
                   </button>
                   <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all">
-                    <MessageCircle size={14} /> {(comments[post.id] || []).length || ''}
+                    <MessageCircle size={14} /> {commentCounts[post.id] ? `${commentCounts[post.id]}` : ''} Comment
                   </button>
-                  <button onClick={() => setActiveEmoji(activeEmoji === post.id ? null : post.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all" title="React">
-                    <Smile size={14} />
+                  <button onClick={() => handleShare(post)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all" title="Share">
+                    {copiedPostId === post.id ? <Check size={14} className="text-green-400" /> : <Share2 size={14} />} Share
                   </button>
                 </div>
 
@@ -370,20 +420,27 @@ export default function PublicFeed() {
                       className="overflow-hidden"
                     >
                       <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
-                        {(comments[post.id] || []).map((comment) => (
+                        {(comments[post.id] || []).map((comment) => {
+                          const commentAvatar = comment.profiles?.avatar_url ? sanitizeUrl(comment.profiles.avatar_url) : '';
+                          return (
                           <div key={comment.id} className="flex gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-surface-300 flex items-center justify-center text-[9px] font-bold text-white/40 flex-shrink-0">
-                              {getInitials(comment.profiles?.username)}
+                            <div className="w-7 h-7 rounded-full bg-surface-300 flex items-center justify-center text-[9px] font-bold text-white/40 flex-shrink-0 overflow-hidden">
+                              {commentAvatar ? (
+                                <img src={commentAvatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              ) : (
+                                getInitials(comment.profiles?.full_name || comment.profiles?.username)
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-white/70">@{comment.profiles?.username}</span>
+                                <span className="text-xs font-semibold text-white/70">{comment.profiles?.full_name || comment.profiles?.username || 'User'}</span>
                                 <span className="text-[10px] text-white/20">{formatRelativeTime(comment.created_at)}</span>
                               </div>
                               <p className="text-xs text-white/50 mt-0.5 leading-relaxed">{comment.content}</p>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
 
                         <div className="flex gap-2 items-center">
                           <input
@@ -408,7 +465,8 @@ export default function PublicFeed() {
                   )}
                 </AnimatePresence>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
