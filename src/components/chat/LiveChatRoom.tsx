@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
   Send, Loader2, ImagePlus, X, Search, Reply, Smile,
   Users, MessageSquare, ArrowDown, User,
@@ -181,7 +181,12 @@ export default function LiveChatRoom() {
       reactions[emoji] = current.filter((id: string) => id !== user.id);
       if (reactions[emoji].length === 0) delete reactions[emoji];
     } else {
-      reactions[emoji] = [...current, user.id];
+      // Clear other reactions for single reaction rule
+      Object.keys(reactions).forEach((key) => {
+        reactions[key] = (reactions[key] || []).filter((id: string) => id !== user.id);
+        if (reactions[key].length === 0) delete reactions[key];
+      });
+      reactions[emoji] = [...(reactions[emoji] || []), user.id];
     }
 
     setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, reactions } : m)));
@@ -295,90 +300,15 @@ export default function LiveChatRoom() {
                     </div>
                   )}
 
-                  <motion.div
-                    initial={{ opacity: 0, x: -5 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="group flex gap-2.5 py-1.5 hover:bg-white/[0.02] rounded-lg px-2 -mx-2 transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-surface-300 flex items-center justify-center text-[10px] font-bold text-white/40 flex-shrink-0 mt-0.5 overflow-hidden">
-                      {msg.profiles?.avatar_url ? (
-                        <img src={sanitizeUrl(msg.profiles.avatar_url)} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <User size={16} className="text-white/40" />
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white/80">
-                          {msg.profiles?.full_name || msg.profiles?.username || 'user'}
-                        </span>
-                        <span className="text-[10px] text-white/15">{formatTimestamp(msg.created_at)}</span>
-
-                        {/* Hover actions */}
-                        <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setReplyTo(msg)} className="p-1 rounded hover:bg-white/10 text-white/20 hover:text-white transition-colors" title="Reply">
-                            <Reply size={12} />
-                          </button>
-                          <button onClick={() => setActiveEmoji(activeEmoji === msg.id ? null : msg.id)} className="p-1 rounded hover:bg-white/10 text-white/20 hover:text-white transition-colors" title="React">
-                            <Smile size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Reply reference */}
-                      {replyMsg && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-white/25 mt-0.5 mb-1">
-                          <Reply size={10} className="text-brand-400/50" />
-                          <span className="font-medium text-brand-400/60">@{replyMsg.profiles?.username}</span>
-                          <span className="truncate max-w-[200px]">{replyMsg.content}</span>
-                        </div>
-                      )}
-
-                      <p className="text-[13px] text-white/65 leading-relaxed break-words">{msg.content}</p>
-
-                      {msg.image_url && (
-                        <img src={sanitizeUrl(msg.image_url)} alt="Attachment" className="mt-2 max-h-60 rounded-xl border border-white/5" loading="lazy" />
-                      )}
-
-                      {/* Reactions */}
-                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {Object.entries(msg.reactions).map(([emoji, users]) => (
-                            <button
-                              key={emoji}
-                              onClick={() => handleReaction(msg.id, emoji)}
-                              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] transition-all ${
-                                (users as string[]).includes(user!.id)
-                                  ? 'bg-brand-500/15 border border-brand-500/30 text-brand-300'
-                                  : 'bg-white/3 border border-white/5 text-white/30 hover:bg-white/5'
-                              }`}
-                            >
-                              {emoji} {(users as string[]).length}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Emoji picker */}
-                      <AnimatePresence>
-                        {activeEmoji === msg.id && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="flex gap-1 mt-1.5 bg-surface-200 border border-white/8 rounded-lg p-1.5 w-fit"
-                          >
-                            {CHAT_EMOJIS.map((emoji) => (
-                              <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="text-lg hover:scale-130 transition-transform p-0.5">
-                                {emoji}
-                              </button>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </motion.div>
+                  <ChatMessageItem
+                    msg={msg}
+                    currentUserId={user.id}
+                    activeEmoji={activeEmoji}
+                    setActiveEmoji={setActiveEmoji}
+                    setReplyTo={setReplyTo}
+                    handleReaction={handleReaction}
+                    replyMsg={replyMsg}
+                  />
                 </div>
               );
             })
@@ -460,3 +390,147 @@ export default function LiveChatRoom() {
     </div>
   );
 }
+
+interface ChatMessageItemProps {
+  msg: ChatMessage;
+  currentUserId: string;
+  activeEmoji: string | null;
+  setActiveEmoji: (id: string | null) => void;
+  setReplyTo: (msg: ChatMessage) => void;
+  handleReaction: (msgId: string, emoji: string) => Promise<void>;
+  replyMsg: ChatMessage | undefined;
+}
+
+function ChatMessageItem({
+  msg,
+  currentUserId,
+  activeEmoji,
+  setActiveEmoji,
+  setReplyTo,
+  handleReaction,
+  replyMsg,
+}: ChatMessageItemProps) {
+  const x = useMotionValue(0);
+  const opacity = useTransform(x, [0, -60], [0, 1]);
+  const scale = useTransform(x, [0, -60], [0.6, 1.1]);
+
+  const handleDragEnd = (event: any, info: any) => {
+    if (info.offset.x < -40) {
+      setReplyTo(msg);
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden group/item">
+      {/* Background Swipe/Reply Indicator */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-0">
+        <motion.div
+          style={{ opacity, scale }}
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30"
+        >
+          <Reply size={16} />
+        </motion.div>
+      </div>
+
+      {/* Draggable Message Container */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -80, right: 0 }}
+        dragElastic={{ left: 0.5, right: 0.1 }}
+        dragSnapToOrigin={true}
+        style={{ x }}
+        onDragEnd={handleDragEnd}
+        initial={{ opacity: 0, x: -5 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="relative z-10 bg-transparent flex gap-2.5 py-1.5 hover:bg-white/[0.02] rounded-lg px-2 -mx-2 transition-colors cursor-grab active:cursor-grabbing select-none"
+      >
+        <div
+          className="w-8 h-8 rounded-full bg-surface-300 flex items-center justify-center text-[10px] font-bold text-white/40 flex-shrink-0 mt-0.5 overflow-hidden pointer-events-auto"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {msg.profiles?.avatar_url ? (
+            <img src={sanitizeUrl(msg.profiles.avatar_url)} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          ) : (
+            <User size={16} className="text-white/40" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 pointer-events-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-white/80">
+              {msg.profiles?.full_name || msg.profiles?.username || 'user'}
+            </span>
+            <span className="text-[10px] text-white/15">{formatTimestamp(msg.created_at)}</span>
+
+            {/* Hover actions */}
+            <div
+              className="ml-auto flex items-center gap-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <button onClick={() => setReplyTo(msg)} className="p-1 rounded hover:bg-white/10 text-white/20 hover:text-white transition-colors" title="Reply">
+                <Reply size={12} />
+              </button>
+              <button onClick={() => setActiveEmoji(activeEmoji === msg.id ? null : msg.id)} className="p-1 rounded hover:bg-white/10 text-white/20 hover:text-white transition-colors" title="React">
+                <Smile size={12} />
+              </button>
+            </div>
+          </div>
+
+          {/* Reply reference */}
+          {replyMsg && (
+            <div className="flex items-center gap-1.5 text-[10px] text-white/25 mt-0.5 mb-1">
+              <Reply size={10} className="text-brand-400/50" />
+              <span className="font-medium text-brand-400/60">@{replyMsg.profiles?.username}</span>
+              <span className="truncate max-w-[200px]">{replyMsg.content}</span>
+            </div>
+          )}
+
+          <p className="text-[13px] text-white/65 leading-relaxed break-words">{msg.content}</p>
+
+          {msg.image_url && (
+            <img src={sanitizeUrl(msg.image_url)} alt="Attachment" className="mt-2 max-h-60 rounded-xl border border-white/5" loading="lazy" />
+          )}
+
+          {/* Reactions */}
+          {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5" onPointerDown={(e) => e.stopPropagation()}>
+              {Object.entries(msg.reactions).map(([emoji, users]) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleReaction(msg.id, emoji)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] transition-all ${
+                    (users as string[]).includes(currentUserId)
+                      ? 'bg-brand-500/15 border border-brand-500/30 text-brand-300'
+                      : 'bg-white/3 border border-white/5 text-white/30 hover:bg-white/5'
+                  }`}
+                >
+                  {emoji} {(users as string[]).length}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Emoji picker */}
+          <AnimatePresence>
+            {activeEmoji === msg.id && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex gap-1 mt-1.5 bg-surface-200 border border-white/8 rounded-lg p-1.5 w-fit"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {CHAT_EMOJIS.map((emoji) => (
+                  <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="text-lg hover:scale-130 transition-transform p-0.5">
+                    {emoji}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
