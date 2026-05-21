@@ -48,6 +48,7 @@ export interface ChatMessage {
   image_url?: string;
   reactions?: Record<string, string[]>;
   reply_to?: string | null;
+  read_by?: string[];
   profiles?: {
     username: string;
     full_name: string;

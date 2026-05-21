@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import Providers from './providers';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import MobileTabBar from '@/components/layout/MobileTabBar';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
@@ -190,10 +191,11 @@ export default function RootLayout({
       <body className="relative min-h-screen bg-surface-0 text-white overflow-x-hidden">
         <Providers>
           <Navbar />
-          <main className="relative z-10 pt-20 min-h-[85vh]">
+          <main className="relative z-10 pt-20 pb-20 md:pb-0 min-h-[85vh]">
             {children}
           </main>
           <Footer />
+          <MobileTabBar />
           <Toaster
             richColors
             position="top-right"
