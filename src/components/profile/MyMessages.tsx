@@ -8,6 +8,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatRelativeTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { PrivateMessage } from '@/lib/types';
+import { sendEmail } from '@/lib/resend';
 
 export default function MyMessages() {
   const { user } = useAuthStore();
@@ -31,12 +32,32 @@ export default function MyMessages() {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
     setSending(true);
+    const messageContent = newMessage.trim();
     try {
-      const { error } = await supabase.from('private_messages').insert({ sender_id: user.id, sender_name: user.email?.split('@')[0] || 'User', sender_contact: user.email || '', message: newMessage.trim() });
+      const { error } = await supabase.from('private_messages').insert({ sender_id: user.id, sender_name: user.email?.split('@')[0] || 'User', sender_contact: user.email || '', message: messageContent });
       if (error) throw error;
       toast.success('Message sent to Hisham!');
       setNewMessage('');
       fetchMessages();
+
+      // Send email notification using Resend
+      try {
+        await sendEmail({
+          to: 'joybanglaghoraranda@gmail.com',
+          subject: `New Private Message from ${user.email || 'User'}`,
+          html: `
+            <h3>New Message Received</h3>
+            <p><strong>Sender:</strong> ${user.email}</p>
+            <p><strong>Message:</strong></p>
+            <div style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #6366f1; border-radius: 4px; font-style: italic;">
+              "${messageContent}"
+            </div>
+            <p>Login to your <a href="${window.location.origin}/admin">Admin Dashboard</a> to reply.</p>
+          `,
+        });
+      } catch (emailErr) {
+        console.error('Email notify failed:', emailErr);
+      }
     } catch (err: any) { toast.error(err.message || 'Failed to send'); } finally { setSending(false); }
   };
 
