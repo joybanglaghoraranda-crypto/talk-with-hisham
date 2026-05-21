@@ -744,23 +744,27 @@ function ChatMessageItem({
   msg, currentUserId, activeEmoji, setActiveEmoji,
   setReplyTo, handleReaction, replyMsg, onOpenMenu, onImageTap,
 }: ChatMessageItemProps) {
-  const x = useMotionValue(0);
-  const replyOpacity = useTransform(x, [0, -60], [0, 1]);
-  const replyScale = useTransform(x, [0, -60], [0.6, 1.1]);
-
   const isOwn = msg.sender_id === currentUserId;
+  const x = useMotionValue(0);
+  const replyOpacity = useTransform(x, isOwn ? [0, -60] : [0, 60], [0, 1]);
+  const replyScale = useTransform(x, isOwn ? [0, -60] : [0, 60], [0.6, 1.1]);
+
   const readCount = (msg.read_by || []).length;
   const isRead = readCount > 0;
 
   const handleDragEnd = (_: any, info: any) => {
-    if (info.offset.x < -40) setReplyTo(msg);
+    if (isOwn) {
+      if (info.offset.x < -40) setReplyTo(msg);
+    } else {
+      if (info.offset.x > 40) setReplyTo(msg);
+    }
   };
 
   return (
     <div className={`relative group/item flex items-end gap-1 ${isOwn ? 'justify-end' : 'justify-start'} mb-0.5`}>
 
-      {/* Swipe reply indicator (always on right side) */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none z-0">
+      {/* Swipe reply indicator */}
+      <div className={`absolute ${isOwn ? 'right-2' : 'left-9'} top-1/2 -translate-y-1/2 pointer-events-none z-0`}>
         <motion.div
           style={{ opacity: replyOpacity, scale: replyScale }}
           className="w-7 h-7 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center"
@@ -795,11 +799,11 @@ function ChatMessageItem({
       )}
 
       {/* Draggable Bubble */}
-      <div className="relative overflow-hidden max-w-[78%] md:max-w-[60%]">
+      <div className="relative max-w-[78%] md:max-w-[60%]">
         <motion.div
           drag="x"
-          dragConstraints={{ left: -80, right: 0 }}
-          dragElastic={{ left: 0.5, right: 0.1 }}
+          dragConstraints={isOwn ? { left: -80, right: 0 } : { left: 0, right: 80 }}
+          dragElastic={isOwn ? { left: 0.5, right: 0.1 } : { left: 0.1, right: 0.5 }}
           dragSnapToOrigin
           style={{ x }}
           onDragEnd={handleDragEnd}

@@ -1,10 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Mail, Phone } from 'lucide-react';
 import { SOCIAL_LINKS, SITE_CONFIG } from '@/lib/constants';
 
 export default function Footer() {
+  const pathname = usePathname();
+  const hideFooter = pathname.startsWith('/chat') || pathname.startsWith('/feed') || pathname.startsWith('/inbox');
+
+  if (hideFooter) return null;
+
   return (
     <footer className="relative z-10 border-t border-white/5 bg-surface-50/80 backdrop-blur-sm mt-16">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
