@@ -57,7 +57,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setLoading(true);
       try {
         const { error } = await getSupabaseClient().auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: `${window.location.origin}/settings?reset=true`,
+          redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
         toast.success('Password reset link sent! Check your email.');

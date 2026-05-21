@@ -50,6 +50,17 @@ export default function PostDetailClient({ postId }: { postId: string }) {
   const handleReaction = async (emoji: string) => {
     if (!user || !post) return;
     const reactions = { ...(post.reactions || {}) };
+
+    // Remove user ID from all other emoji reaction arrays
+    Object.keys(reactions).forEach((key) => {
+      if (key !== emoji) {
+        reactions[key] = (reactions[key] || []).filter((id: string) => id !== user.id);
+        if (reactions[key].length === 0) {
+          delete reactions[key];
+        }
+      }
+    });
+
     const current = reactions[emoji] || [];
     const already = current.includes(user.id);
 

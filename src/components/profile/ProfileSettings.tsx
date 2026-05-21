@@ -7,7 +7,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { uploadFile } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useSearchParams } from 'next/navigation';
 
 export default function ProfileSettings() {
   const { user, signOut } = useAuthStore();
@@ -24,8 +23,6 @@ export default function ProfileSettings() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
   
-  const searchParams = useSearchParams();
-  const isResetFlow = searchParams?.get('reset') === 'true';
   const supabase = getSupabaseClient();
 
   useEffect(() => { if (user) fetchProfile(); }, [user]);
@@ -66,10 +63,13 @@ export default function ProfileSettings() {
     if (!file || !user) return;
     if (file.size > 2 * 1024 * 1024) { toast.error('Max 2MB'); return; }
     try {
-      const url = await uploadFile(supabase as any, 'avatars', `${user.id}/${Date.now()}`, file);
+      const url = await uploadFile(supabase as any, 'media', `avatars/${user.id}_${Date.now()}`, file);
       setAvatarUrl(url);
       toast.success('Avatar uploaded');
-    } catch { toast.error('Upload failed'); }
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      toast.error('Upload failed');
+    }
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,7 +80,10 @@ export default function ProfileSettings() {
       const url = await uploadFile(supabase as any, 'media', `covers/${user.id}_${Date.now()}`, file);
       setCoverUrl(url);
       toast.success('Cover uploaded');
-    } catch { toast.error('Upload failed'); }
+    } catch (err: any) {
+      console.error('Cover upload error:', err);
+      toast.error('Upload failed');
+    }
   };
 
   const handleUpdatePassword = async () => {
@@ -116,14 +119,7 @@ export default function ProfileSettings() {
         <p className="text-white/30 text-sm">Manage your profile and account settings.</p>
       </div>
 
-      {isResetFlow && (
-        <div className="bg-brand-500/10 border border-brand-500/30 rounded-xl p-4 mb-6 text-brand-400 text-sm flex flex-col gap-1.5 shadow-lg shadow-brand-500/5">
-          <span className="font-semibold text-white flex items-center gap-1.5">
-            <Lock size={16} className="text-brand-400" /> Password Reset Requested
-          </span>
-          <span>Please enter and confirm your new password in the **Change Password** section below to complete the reset.</span>
-        </div>
-      )}
+
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Profile Picture (Avatar) Card */}

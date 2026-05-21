@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Settings, MessageCircle, Award, ExternalLink, Sparkles, Heart, Camera, Trash2, User } from 'lucide-react';
+import { MapPin, Calendar, Settings, MessageCircle, Award, ExternalLink, Sparkles, User } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { SOCIAL_LINKS } from '@/lib/constants';
-import { formatRelativeTime, sanitizeUrl, uploadFile } from '@/lib/utils';
+import { formatRelativeTime, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import type { Profile } from '@/lib/types';
@@ -77,45 +77,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
     setCommentCount(count || 0);
   };
 
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB for cover photos'); return; }
-    
-    const loadingToast = toast.loading('Uploading cover photo...');
-    try {
-      const url = await uploadFile(supabase as any, 'media', `covers/${user.id}_${Date.now()}`, file);
-      const { error } = await supabase
-        .from('profiles')
-        .update({ cover_url: url, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      
-      setProfile(prev => prev ? { ...prev, cover_url: url } : null);
-      toast.success('Cover photo updated!', { id: loadingToast });
-    } catch (err: any) {
-      toast.error(err.message || 'Upload failed', { id: loadingToast });
-    }
-  };
 
-  const handleRemoveCover = async () => {
-    if (!user) return;
-    const loadingToast = toast.loading('Removing cover photo...');
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ cover_url: null, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-      
-      if (error) throw error;
-      
-      setProfile(prev => prev ? { ...prev, cover_url: undefined } : null);
-      toast.success('Cover photo removed!', { id: loadingToast });
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to remove cover photo', { id: loadingToast });
-    }
-  };
 
   if (loading) {
     return (
@@ -162,25 +124,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-surface-0 via-transparent to-transparent" />
             
-            {/* Direct Cover Edit Actions */}
-            {isOwnProfile && (
-              <div className="absolute bottom-4 right-4 flex gap-2 z-20">
-                {profileCoverUrl && (
-                  <button
-                    onClick={handleRemoveCover}
-                    className="bg-accent-600/80 hover:bg-accent-600 backdrop-blur-md border border-white/15 text-white text-xs px-3 py-1.5 rounded-lg transition-all hover:scale-105 flex items-center gap-1.5"
-                  >
-                    <Trash2 size={14} />
-                    <span>Remove</span>
-                  </button>
-                )}
-                <label className="bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:scale-105 flex items-center gap-1.5">
-                  <Camera size={14} />
-                  <span>{profileCoverUrl ? 'Change Cover' : 'Upload Cover'}</span>
-                  <input type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" aria-label="Upload cover photo" />
-                </label>
-              </div>
-            )}
+
           </div>
 
           <div className="px-6 md:px-8 pb-8 relative">
@@ -286,9 +230,6 @@ export default function ProfilePage({ userId }: { userId?: string }) {
                   <p className="text-white/65 leading-relaxed text-[14px]">{post.content}</p>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
                     <span className="text-white/20 text-xs">{formatRelativeTime(post.created_at)}</span>
-                    <span className="text-white/25 text-xs flex items-center gap-1">
-                      <Heart size={12} className="text-accent-400" /> {post.likes_count}
-                    </span>
                   </div>
                 </Link>
               ))
