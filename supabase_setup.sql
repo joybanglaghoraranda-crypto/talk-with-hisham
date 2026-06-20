@@ -81,3 +81,29 @@ CREATE POLICY "Authenticated users can update message reactions."
 
 -- Allow authenticated users to upload to media
 -- CREATE POLICY "Authenticated Upload" ON storage.objects FOR INSERT WITH CHECK ( auth.role() = 'authenticated' );
+
+
+-- FUNCTION: Restrict message updates by non-senders
+-- Allows non-senders to only update the reactions and read_by columns.
+CREATE OR REPLACE FUNCTION restrict_message_updates()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- If the user performing the update is NOT the original sender
+  IF auth.uid() IS DISTINCT FROM OLD.sender_id THEN
+    -- They are only allowed to modify certain fields.
+    -- If they try to modify content, image_url, sender_id, created_at, or any future sensitive fields,
+    -- we compare the full JSON representation minus the allowed fields.
+    IF (to_jsonb(NEW) - 'reactions' - 'read_by') IS DISTINCT FROM (to_jsonb(OLD) - 'reactions' - 'read_by') THEN
+       RAISE EXCEPTION 'Not authorized to modify message content.';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- TRIGGER: Apply the restriction to the messages table
+DROP TRIGGER IF EXISTS restrict_message_updates_trigger ON messages;
+CREATE TRIGGER restrict_message_updates_trigger
+BEFORE UPDATE ON messages
+FOR EACH ROW
+EXECUTE FUNCTION restrict_message_updates();
