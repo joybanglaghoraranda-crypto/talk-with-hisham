@@ -6,7 +6,8 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",
@@ -31,10 +32,14 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "jest": "^30.4.2",
     "tailwindcss": "^4.1.14",
+    "ts-jest": "^29.4.11",
+    "ts-node": "^10.9.2",
     "typescript": "~5.8.2"
   },
   "overrides": {
