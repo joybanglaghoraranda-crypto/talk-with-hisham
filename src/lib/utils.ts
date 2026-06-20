@@ -54,13 +54,14 @@ export function getDateLabel(dateStr: string): string {
 
 export function getInitials(name?: string | null): string {
   if (!name) return '?';
-  return name
+  const initials = name
     .split(' ')
     .map((n) => n[0])
     .filter(Boolean)
     .join('')
     .toUpperCase()
     .slice(0, 2);
+  return initials || '?';
 }
 
 /**
