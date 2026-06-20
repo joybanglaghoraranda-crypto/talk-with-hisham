@@ -67,7 +67,7 @@ export function getInitials(name?: string | null): string {
  * Upload a file to a Supabase storage bucket
  */
 export async function uploadFile(
-  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>,
+  supabase: ReturnType<typeof import('./supabase/client').getSupabaseClient>,
   bucket: string,
   path: string,
   file: File

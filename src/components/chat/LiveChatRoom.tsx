@@ -212,7 +212,7 @@ export default function LiveChatRoom() {
       let imageUrl: string | undefined;
       if (imageFile) {
         const path = `chat/${Date.now()}_${imageFile.name}`;
-        imageUrl = await uploadFile(supabase as any, 'media', path, imageFile);
+        imageUrl = await uploadFile(supabase, 'media', path, imageFile);
       }
 
       const optimistic: ChatMessage = {
