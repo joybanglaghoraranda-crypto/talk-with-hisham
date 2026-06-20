@@ -25,7 +25,7 @@ export default function MyMessages() {
     try {
       const { data } = await supabase.from('private_messages').select('*').eq('sender_id', user!.id).order('created_at', { ascending: false });
       setMessages(data || []);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err: any) { toast.error(err.message || 'Failed to load messages'); } finally { setLoading(false); }
   };
 
   const handleSend = async (e: React.FormEvent) => {
