@@ -63,7 +63,7 @@ export default function ProfileSettings() {
     if (!file || !user) return;
     if (file.size > 2 * 1024 * 1024) { toast.error('Max 2MB'); return; }
     try {
-      const url = await uploadFile(supabase as any, 'media', `avatars/${user.id}_${Date.now()}`, file);
+      const url = await uploadFile(supabase, 'media', `avatars/${user.id}_${Date.now()}`, file);
       setAvatarUrl(url);
       toast.success('Avatar uploaded');
     } catch (err: any) {
@@ -77,7 +77,7 @@ export default function ProfileSettings() {
     if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB'); return; }
     try {
-      const url = await uploadFile(supabase as any, 'media', `covers/${user.id}_${Date.now()}`, file);
+      const url = await uploadFile(supabase, 'media', `covers/${user.id}_${Date.now()}`, file);
       setCoverUrl(url);
       toast.success('Cover uploaded');
     } catch (err: any) {

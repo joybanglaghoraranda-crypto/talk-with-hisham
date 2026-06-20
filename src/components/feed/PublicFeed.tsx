@@ -79,7 +79,7 @@ export default function PublicFeed() {
       let imageUrl: string | undefined;
       if (postImage) {
         const path = `posts/${Date.now()}_${postImage.name}`;
-        imageUrl = await uploadFile(supabase as any, 'media', path, postImage);
+        imageUrl = await uploadFile(supabase, 'media', path, postImage);
       }
       const { error } = await supabase.from('posts').insert({
         author_id: user!.id,
