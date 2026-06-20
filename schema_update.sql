@@ -19,7 +19,7 @@ CREATE POLICY "Senders can view their own private messages"
   ON private_messages FOR SELECT
   USING (
     auth.uid() = sender_id
-    OR (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+    OR EXISTS (SELECT 1 FROM admins WHERE id = auth.uid())
   );
 -- NOTE: If the old "Only admin can view" policy exists, DROP it first:
 -- DROP POLICY IF EXISTS "Only admin can view private messages" ON private_messages;

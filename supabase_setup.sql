@@ -1,3 +1,16 @@
+-- TABLE: admins
+-- Stores admin users
+CREATE TABLE admins (
+  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS POLICIES FOR ADMINS
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins are viewable by everyone."
+  ON admins FOR SELECT USING (true);
+
 -- TABLE: profiles
 -- Stores user profile information
 CREATE TABLE profiles (
@@ -57,7 +70,7 @@ CREATE POLICY "Posts are viewable by everyone."
 
 CREATE POLICY "Only admin can create posts." 
   ON posts FOR INSERT WITH CHECK (
-    (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+    EXISTS (SELECT 1 FROM admins WHERE id = auth.uid())
   );
 
 CREATE POLICY "Users can delete own posts." 
