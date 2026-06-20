@@ -31,9 +31,17 @@ export async function POST(request: Request) {
     const defaultAppUrl = `${protocol}://${host}`;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || defaultAppUrl;
 
-    // Check if we should bypass QStash (development mode, missing QStash token, or explicit bypass env var)
+    // Check if we should bypass QStash (only in development mode)
     const isDev = process.env.NODE_ENV === 'development';
-    const bypassQStash = !qstashClient || isDev || process.env.BYPASS_QSTASH === 'true';
+    const bypassQStash = isDev && (!qstashClient || process.env.BYPASS_QSTASH === 'true');
+
+    if (!bypassQStash && !qstashClient) {
+      console.error('QStash client is not configured in production environment.');
+      return NextResponse.json(
+        { error: 'Internal Server Error: Email service misconfigured.' },
+        { status: 500 }
+      );
+    }
 
     if (bypassQStash) {
       console.log('Bypassing QStash queue: Sending email directly using Resend');
@@ -55,7 +63,7 @@ export async function POST(request: Request) {
     const callbackUrl = `${appUrl.replace(/\/$/, '')}/api/send-email/callback`;
     
     console.log(`Publishing email task to QStash. Callback URL: ${callbackUrl}`);
-    const { messageId } = await qstashClient.publishJSON({
+    const { messageId } = await qstashClient!.publishJSON({
       url: callbackUrl,
       body: { to, subject, html },
       headers: {
