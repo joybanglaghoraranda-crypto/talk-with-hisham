@@ -9,6 +9,7 @@ ALTER TABLE private_messages ADD COLUMN IF NOT EXISTS admin_reply_at TIMESTAMP W
 
 -- 2. Drop ALL existing policies on private_messages to avoid conflicts
 DROP POLICY IF EXISTS "Anyone can send a private message" ON private_messages;
+DROP POLICY IF EXISTS "Authenticated users can send a private message" ON private_messages;
 DROP POLICY IF EXISTS "Only admin can view private messages" ON private_messages;
 DROP POLICY IF EXISTS "Only admin can update private messages" ON private_messages;
 DROP POLICY IF EXISTS "Only admin can delete private messages" ON private_messages;
@@ -16,10 +17,10 @@ DROP POLICY IF EXISTS "Senders can view their own private messages" ON private_m
 
 -- 3. Re-create clean policies
 
--- Allow any authenticated user to INSERT (send a message)
-CREATE POLICY "Anyone can send a private message"
+-- Allow authenticated users to send a private message (ensuring they only send as themselves)
+CREATE POLICY "Authenticated users can send a private message"
   ON private_messages FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = sender_id);
 
 -- Allow admin to see ALL messages, and users to see ONLY their own
 CREATE POLICY "Users and admin can view private messages"
