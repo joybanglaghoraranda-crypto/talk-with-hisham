@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 import type { User, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { ADMIN_EMAIL } from '@/lib/constants';
 
 interface AuthState {
   user: User | null;
@@ -35,11 +34,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Get initial session
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user ?? null;
+    let isAdmin = false;
+
+    if (user) {
+      const { data } = await supabase.from('admin_users').select('*').eq('id', user.id).maybeSingle();
+      isAdmin = !!data;
+    }
 
     set({
       session,
       user,
-      isAdmin: user?.email === ADMIN_EMAIL,
+      isAdmin,
       loading: false,
       initialized: true,
     });
@@ -47,12 +52,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (user) ensureProfile(user);
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event, session) => {
       const user = session?.user ?? null;
+      let isAdmin = false;
+
+      if (user) {
+        const { data } = await supabase.from('admin_users').select('*').eq('id', user.id).maybeSingle();
+        // Prevent race conditions: Ensure the user hasn't changed before setting state
+        const currentSession = (await supabase.auth.getSession()).data.session;
+        if (currentSession?.user?.id !== user.id) return;
+        isAdmin = !!data;
+      }
+
       set({
         session,
         user,
-        isAdmin: user?.email === ADMIN_EMAIL,
+        isAdmin,
       });
       if (user) ensureProfile(user);
     });
