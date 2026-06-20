@@ -46,6 +46,8 @@ export default function LiveChatRoom() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<any>(null);
   const markedReadRef = useRef<Set<string>>(new Set());
+  const profileCacheRef = useRef<Map<string, any>>(new Map());
+  const pendingProfileFetchesRef = useRef<Set<string>>(new Set());
   const supabase = getSupabaseClient();
 
   /* ── Scroll ── */
@@ -61,6 +63,15 @@ export default function LiveChatRoom() {
         .select('*, profiles(username, full_name, avatar_url)')
         .order('created_at', { ascending: true })
         .limit(200);
+
+      if (data) {
+        data.forEach(msg => {
+          if (msg.sender_id && msg.profiles && !profileCacheRef.current.has(msg.sender_id)) {
+            profileCacheRef.current.set(msg.sender_id, msg.profiles);
+          }
+        });
+      }
+
       setMessages(data || []);
     } catch (err) {
       console.error('Error loading messages:', err);
@@ -80,18 +91,36 @@ export default function LiveChatRoom() {
       .channel('chat_room')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const newMsg = payload.new as ChatMessage;
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
-        });
-        // Fetch profile for new message
-        supabase.from('profiles').select('username, full_name, avatar_url')
-          .eq('id', newMsg.sender_id).single()
-          .then(({ data }) => {
-            if (data) {
-              setMessages((prev) => prev.map((m) => m.id === newMsg.id ? { ...m, profiles: data } : m));
-            }
+
+        // Handle profile from cache or fetch
+        if (profileCacheRef.current.has(newMsg.sender_id)) {
+          newMsg.profiles = profileCacheRef.current.get(newMsg.sender_id);
+
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
           });
+        } else {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+
+          if (!pendingProfileFetchesRef.current.has(newMsg.sender_id)) {
+            pendingProfileFetchesRef.current.add(newMsg.sender_id);
+            // Fetch profile for new message
+            supabase.from('profiles').select('username, full_name, avatar_url')
+              .eq('id', newMsg.sender_id).single()
+              .then(({ data }) => {
+                pendingProfileFetchesRef.current.delete(newMsg.sender_id);
+                if (data) {
+                  profileCacheRef.current.set(newMsg.sender_id, data);
+                  setMessages((prev) => prev.map((m) => m.sender_id === newMsg.sender_id ? { ...m, profiles: data } : m));
+                }
+              });
+          }
+        }
+
         // Mark as read if from someone else
         if (newMsg.sender_id !== user.id && !markedReadRef.current.has(newMsg.id)) {
           markedReadRef.current.add(newMsg.id);
