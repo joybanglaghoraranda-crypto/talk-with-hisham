@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import type { User, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 interface AuthState {
   user: User | null;
@@ -37,8 +38,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     let isAdmin = false;
 
     if (user) {
-      const { data } = await supabase.from('admin_users').select('*').eq('id', user.id).maybeSingle();
-      isAdmin = !!data;
+      isAdmin = user.email === ADMIN_EMAIL;
     }
 
     set({
@@ -57,11 +57,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let isAdmin = false;
 
       if (user) {
-        const { data } = await supabase.from('admin_users').select('*').eq('id', user.id).maybeSingle();
-        // Prevent race conditions: Ensure the user hasn't changed before setting state
-        const currentSession = (await supabase.auth.getSession()).data.session;
-        if (currentSession?.user?.id !== user.id) return;
-        isAdmin = !!data;
+        isAdmin = user.email === ADMIN_EMAIL;
       }
 
       set({
