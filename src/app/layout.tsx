@@ -184,7 +184,7 @@ export default function RootLayout({
                 ],
                 'jobTitle': ['Instructor', 'Educator', 'Assistant Researcher'],
               }
-            ]),
+            ]).replace(/</g, '\\u003c'),
           }}
         />
       </head>
