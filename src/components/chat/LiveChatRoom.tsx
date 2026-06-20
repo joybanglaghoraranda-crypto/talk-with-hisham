@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
   Send, Loader2, ImagePlus, X, Search, Reply, Smile,
@@ -317,11 +317,17 @@ export default function LiveChatRoom() {
   };
 
   /* ── Computed ── */
+  const messagesMap = useMemo(() => {
+    const map = new Map<string, ChatMessage>();
+    messages.forEach((m) => map.set(m.id, m));
+    return map;
+  }, [messages]);
+
   const filteredMessages = searchQuery
     ? messages.filter((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
     : messages;
 
-  const findReplyMessage = (id: string | null | undefined) => messages.find((m) => m.id === id);
+  const findReplyMessage = (id: string | null | undefined) => id ? messagesMap.get(id) : undefined;
   const typingDisplay = Array.from(typingUsers.values());
 
   /* ── Not logged in ── */
