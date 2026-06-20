@@ -1,7 +1,5 @@
 import { Send, Linkedin, Facebook, MessageCircle } from 'lucide-react';
 
-export const ADMIN_EMAIL = 'ibnenurakondo@gmail.com';
-
 export const SOCIAL_LINKS = [
   {
     label: 'Telegram',
@@ -28,10 +26,14 @@ export const SOCIAL_LINKS = [
 export const FEED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'] as const;
 export const CHAT_EMOJIS = ['👍', '❤️', '😂', '😮', '😢'] as const;
 
+export const ADMIN_EMAIL = 'ibnenurakondo@gmail.com';
+
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://twhisham.vercel.app';
+
 export const SITE_CONFIG = {
   name: 'Talk with Hisham',
   description: 'A personal portfolio and social platform by Muhibbullah Hisham — for real-time debates, communication, and intellectual discourse.',
-  url: 'https://talkwithhisham.vercel.app',
+  url: 'https://twhisham.vercel.app',
   author: 'Muhibbullah Hisham',
   email: 'ibnenurakondo@gmail.com',
   phone: '+88 01898529450',

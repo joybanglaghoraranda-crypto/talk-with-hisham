@@ -33,7 +33,8 @@ export async function POST(request: Request) {
 
     // Check if we should bypass QStash (development mode, missing QStash token, or explicit bypass env var)
     const isDev = process.env.NODE_ENV === 'development';
-    const bypassQStash = !qstashClient || isDev || process.env.BYPASS_QSTASH === 'true';
+    // SECURITY FIX: Only allow bypassing QStash in development mode
+    const bypassQStash = isDev && (!qstashClient || process.env.BYPASS_QSTASH === 'true');
 
     if (bypassQStash) {
       console.log('Bypassing QStash queue: Sending email directly using Resend');
@@ -49,6 +50,15 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ success: true, data, bypassed: true });
+    }
+
+    // SECURITY FIX: In production, require QStash client to be configured
+    if (!qstashClient) {
+      console.error('QStash client not configured in production mode');
+      return NextResponse.json(
+        { error: 'Email service configuration error' },
+        { status: 500 }
+      );
     }
 
     // Publish to QStash queue

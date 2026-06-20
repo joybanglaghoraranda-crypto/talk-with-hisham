@@ -5,7 +5,28 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import MobileTabBar from '@/components/layout/MobileTabBar';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/react';
+import { Sora, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+
+// Configure Google Fonts for self-hosting & optimal performance
+const sora = Sora({
+  subsets: ['latin'],
+  variable: '--font-heading',
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: {
@@ -114,7 +135,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`dark ${sora.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
         <script
           type="application/ld+json"
@@ -184,11 +205,11 @@ export default function RootLayout({
                 ],
                 'jobTitle': ['Instructor', 'Educator', 'Assistant Researcher'],
               }
-            ]),
+            ]).replace(/</g, '\\u003c'),
           }}
         />
       </head>
-      <body className="relative min-h-screen bg-surface-0 text-white overflow-x-hidden">
+      <body className="relative min-h-screen bg-surface-0 text-white overflow-x-hidden font-sans">
         <Providers>
           <Navbar />
           <main className="relative z-10 pt-20 pb-20 md:pb-0 min-h-[85vh]">
@@ -210,6 +231,7 @@ export default function RootLayout({
           />
         </Providers>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );

@@ -23,3 +23,5 @@ Sentry.init({
     /safari-extension:\/\//i,
   ],
 });
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
