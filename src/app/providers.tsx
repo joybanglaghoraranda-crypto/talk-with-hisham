@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useNotificationStore } from '@/stores/notification-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { RealtimePostgresUpdatePayload } from '@supabase/supabase-js';
+import { PrivateMessage } from '@/lib/types';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((s) => s.initialize);
@@ -32,8 +34,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           table: 'private_messages',
           filter: `sender_id=eq.${user.id}`,
         },
-        (payload) => {
-          const updated = payload.new as any;
+        (payload: RealtimePostgresUpdatePayload<PrivateMessage>) => {
+          const updated = payload.new;
           if (updated.admin_reply && !payload.old?.admin_reply) {
             addNotification({
               type: 'message_reply',
