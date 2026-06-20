@@ -31,10 +31,10 @@ async function handler(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Internal error in QStash callback:', err);
     // Return 500 so QStash knows it failed and will retry
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
 

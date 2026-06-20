@@ -58,7 +58,7 @@ export default function MyMessages() {
       } catch (emailErr) {
         console.error('Email notify failed:', emailErr);
       }
-    } catch (err: any) { toast.error(err.message || 'Failed to send'); } finally { setSending(false); }
+    } catch (err) { toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to send'); } finally { setSending(false); }
   };
 
   if (!user) return (<div className="flex flex-col items-center justify-center min-h-[50vh] text-center"><Mail className="text-white/10 mb-4" size={48} /><h2 className="text-xl font-heading font-bold text-white mb-2">Sign in Required</h2><p className="text-white/35 text-sm">Sign in to access your inbox.</p></div>);

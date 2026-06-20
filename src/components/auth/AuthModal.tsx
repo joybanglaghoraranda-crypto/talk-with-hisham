@@ -44,8 +44,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         toast.success('Magic link sent! Check your email.');
         resetForm();
         onClose();
-      } catch (err: any) {
-        toast.error(err.message || 'Failed to send magic link');
+      } catch (err) {
+        toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to send magic link');
       } finally {
         setLoading(false);
       }
@@ -63,8 +63,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         toast.success('Password reset link sent! Check your email.');
         resetForm();
         onClose();
-      } catch (err: any) {
-        toast.error(err.message || 'Failed to send reset link');
+      } catch (err) {
+        toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to send reset link');
       } finally {
         setLoading(false);
       }
@@ -95,8 +95,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
       resetForm();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || 'Authentication failed');
+    } catch (err) {
+      toast.error((err instanceof Error ? err.message : String(err)) || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -106,8 +106,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     try {
       const { error } = await signInWithOAuth(provider);
       if (error) throw error;
-    } catch (err: any) {
-      toast.error(err.message || `Failed to sign in with ${provider}`);
+    } catch (err) {
+      toast.error((err instanceof Error ? err.message : String(err)) || `Failed to sign in with ${provider}`);
     }
   };
 
