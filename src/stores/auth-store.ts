@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { ADMIN_EMAIL } from '@/lib/constants';
 
@@ -13,10 +13,10 @@ interface AuthState {
   initialized: boolean;
 
   initialize: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, username?: string, fullName?: string) => Promise<{ error: any }>;
-  signInWithOAuth: (provider: 'google' | 'github') => Promise<{ error: any }>;
-  signInWithMagicLink: (email: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, username?: string, fullName?: string) => Promise<{ error: AuthError | null }>;
+  signInWithOAuth: (provider: 'google' | 'github') => Promise<{ error: AuthError | null }>;
+  signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
 
