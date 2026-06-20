@@ -14,6 +14,13 @@ import { formatTimestamp, getDateLabel, uploadFile, sanitizeUrl } from '@/lib/ut
 import { toast } from 'sonner';
 import type { ChatMessage } from '@/lib/types';
 
+interface ChatPresence {
+  user_id: string;
+  online_at: string;
+  is_typing: boolean;
+  display_name: string;
+}
+
 /* ═══════════════════════════════════════════
    Main Component
    ═══════════════════════════════════════════ */
@@ -108,12 +115,12 @@ export default function LiveChatRoom() {
         setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
       })
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
+        const state = channel.presenceState<ChatPresence>();
         setOnlineCount(Object.keys(state).length);
         // Extract typing users
         const typing = new Map<string, string>();
-        Object.values(state).forEach((presences: any) => {
-          presences.forEach((p: any) => {
+        Object.values(state).forEach((presences) => {
+          presences.forEach((p) => {
             if (p.is_typing && p.user_id !== user.id) {
               typing.set(p.user_id, p.display_name || 'Someone');
             }
