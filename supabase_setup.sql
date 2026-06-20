@@ -49,6 +49,19 @@ CREATE POLICY "Users can insert their own profile."
 CREATE POLICY "Users can update own profile." 
   ON profiles FOR UPDATE USING (auth.uid() = id);
 
+-- TABLE: admin_users
+-- Stores administrators based on auth.users
+CREATE TABLE admin_users (
+  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS POLICIES FOR ADMIN_USERS
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admin users are viewable by everyone."
+  ON admin_users FOR SELECT USING (true);
+
 -- RLS POLICIES FOR POSTS
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 
@@ -57,7 +70,7 @@ CREATE POLICY "Posts are viewable by everyone."
 
 CREATE POLICY "Only admin can create posts." 
   ON posts FOR INSERT WITH CHECK (
-    (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+    EXISTS (SELECT 1 FROM admin_users WHERE id = auth.uid())
   );
 
 CREATE POLICY "Users can delete own posts." 

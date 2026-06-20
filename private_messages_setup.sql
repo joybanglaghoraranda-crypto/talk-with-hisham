@@ -17,16 +17,17 @@ CREATE POLICY "Anyone can send a private message"
   ON private_messages FOR INSERT
   WITH CHECK (true);
 
--- ONLY the Admin (Hisham) can read the messages.
--- Replace the email address below with the EXACT email you used to sign up as Admin on Supabase
+
+-- ONLY the Admin can view, update, or delete the messages.
+-- Ensure the admin's user id is inserted into the admin_users table
 CREATE POLICY "Only admin can view private messages"
   ON private_messages FOR SELECT
-  USING ( auth.jwt() ->> 'email' = 'ibnenurakondo@gmail.com' );
+  USING ( EXISTS (SELECT 1 FROM admin_users WHERE id = auth.uid()) );
   
 CREATE POLICY "Only admin can update private messages"
   ON private_messages FOR UPDATE
-  USING ( auth.jwt() ->> 'email' = 'ibnenurakondo@gmail.com' );
+  USING ( EXISTS (SELECT 1 FROM admin_users WHERE id = auth.uid()) );
 
 CREATE POLICY "Only admin can delete private messages"
   ON private_messages FOR DELETE
-  USING ( auth.jwt() ->> 'email' = 'ibnenurakondo@gmail.com' );
+  USING ( EXISTS (SELECT 1 FROM admin_users WHERE id = auth.uid()) );

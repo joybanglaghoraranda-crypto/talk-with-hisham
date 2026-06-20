@@ -1,7 +1,5 @@
 import { Send, Linkedin, Facebook, MessageCircle } from 'lucide-react';
 
-export const ADMIN_EMAIL = 'ibnenurakondo@gmail.com';
-
 export const SOCIAL_LINKS = [
   {
     label: 'Telegram',
