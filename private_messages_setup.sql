@@ -12,10 +12,11 @@ CREATE TABLE private_messages (
 -- Turn on Row Level Security
 ALTER TABLE private_messages ENABLE ROW LEVEL SECURITY;
 
--- Allow anyone to insert a message (so guests can send messages too)
-CREATE POLICY "Anyone can send a private message"
+
+-- Allow authenticated users to send a private message (ensuring they only send as themselves)
+CREATE POLICY "Authenticated users can send a private message"
   ON private_messages FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = sender_id);
 
 -- ONLY the Admin (Hisham) can read the messages.
 -- Replace the email address below with the EXACT email you used to sign up as Admin on Supabase
