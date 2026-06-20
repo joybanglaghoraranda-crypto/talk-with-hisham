@@ -26,24 +26,24 @@ CREATE POLICY "Users and admin can view private messages"
   ON private_messages FOR SELECT
   USING (
     auth.uid() = sender_id
-    OR (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+    OR EXISTS (SELECT 1 FROM admins WHERE id = auth.uid())
   );
 
 -- Allow ONLY admin to update (for replying)
 CREATE POLICY "Admin can update private messages"
   ON private_messages FOR UPDATE
   USING (
-    (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+    EXISTS (SELECT 1 FROM admins WHERE id = auth.uid())
   )
   WITH CHECK (
-    (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+    EXISTS (SELECT 1 FROM admins WHERE id = auth.uid())
   );
 
 -- Allow ONLY admin to delete
 CREATE POLICY "Admin can delete private messages"
   ON private_messages FOR DELETE
   USING (
-    (auth.jwt() ->> 'email') = 'ibnenurakondo@gmail.com'
+    EXISTS (SELECT 1 FROM admins WHERE id = auth.uid())
   );
 
 -- 4. Ensure RLS is enabled
