@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 import type { User, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { ADMIN_EMAIL } from '@/lib/constants';
 
 interface AuthState {
   user: User | null;
@@ -39,7 +38,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       session,
       user,
-      isAdmin: user?.email === ADMIN_EMAIL,
+      isAdmin: user?.app_metadata?.role === 'admin',
       loading: false,
       initialized: true,
     });
@@ -52,7 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         session,
         user,
-        isAdmin: user?.email === ADMIN_EMAIL,
+        isAdmin: user?.app_metadata?.role === 'admin',
       });
       if (user) ensureProfile(user);
     });
