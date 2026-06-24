@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { Resend } from 'resend';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_xxxxxxxxx');
 
@@ -20,6 +22,53 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Missing required fields: to, subject, html' },
         { status: 400 }
+      );
+    }
+
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Ignore if setAll is called from a Server Component / middleware context
+            }
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required to send emails' },
+        { status: 401 }
+      );
+    }
+
+    const isAdmin = user.app_metadata?.role === 'admin';
+
+    // Non-admin users can ONLY send emails to the admin
+    const toArray = Array.isArray(to) ? to : [to];
+    const adminEmail = process.env.ADMIN_EMAIL || 'joybanglaghoraranda@gmail.com';
+    const isSendingOnlyToAdmin = toArray.length === 1 && toArray[0] === adminEmail;
+
+    if (!isAdmin && !isSendingOnlyToAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: You can only send messages to the admin' },
+        { status: 403 }
       );
     }
 

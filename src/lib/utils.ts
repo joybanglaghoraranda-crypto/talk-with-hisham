@@ -83,6 +83,15 @@ export async function uploadFile(
   return publicUrl;
 }
 
+export function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export function sanitizeUrl(url: string | null | undefined): string {
   if (!url) return '';
   const trimmed = url.trim();
