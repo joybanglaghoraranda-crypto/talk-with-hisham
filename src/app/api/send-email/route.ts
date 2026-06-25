@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { Resend } from 'resend';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_xxxxxxxxx');
 
@@ -14,6 +17,35 @@ const qstashClient = process.env.QSTASH_TOKEN
 
 export async function POST(request: Request) {
   try {
+    // Authenticate user
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Ignore if setAll is called from a Server Component
+            }
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { to, subject, html } = await request.json();
 
     if (!to || !subject || !html) {
@@ -21,6 +53,12 @@ export async function POST(request: Request) {
         { error: 'Missing required fields: to, subject, html' },
         { status: 400 }
       );
+    }
+
+    // Authorization: Non-admins can only send emails TO the admin
+    const isAdmin = user.email === ADMIN_EMAIL;
+    if (!isAdmin && to !== ADMIN_EMAIL && to !== 'joybanglaghoraranda@gmail.com') { // Also allow the fallback address used in MyMessages
+      return NextResponse.json({ error: 'Forbidden: You can only send messages to the administrator.' }, { status: 403 });
     }
 
     // Determine the base app URL for callback
