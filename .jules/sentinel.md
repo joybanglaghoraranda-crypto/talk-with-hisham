@@ -1,0 +1,4 @@
+## 2024-05-18 - [Fix Authenticated Open Relay in Email API]
+**Vulnerability:** The `/api/send-email/route.ts` API endpoint allowed unauthenticated access and permitted sending emails to arbitrary addresses. It functioned as an open email relay that anyone could abuse to send spam or phishing emails from the application's domain.
+**Learning:** Next.js App Router API routes must explicitly implement authentication and authorization checks, especially when interacting with external services like email providers (Resend/QStash). Assuming only the frontend calls the API is a critical security flaw.
+**Prevention:** Always initialize the Supabase server client and verify user authentication (`supabase.auth.getUser()`) in API routes that perform sensitive actions. Additionally, restrict the scope of actions based on roles (e.g., non-admins can only send emails to the `ADMIN_EMAIL`).
