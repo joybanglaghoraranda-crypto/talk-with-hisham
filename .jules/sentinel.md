@@ -1,0 +1,4 @@
+## 2024-05-24 - Unauthenticated Open Relay and XSS in Email Endpoint
+**Vulnerability:** The email API route (`/api/send-email/route.ts`) was completely unauthenticated and allowed sending emails to arbitrary addresses. Additionally, user input passed to the HTML template in `MyMessages.tsx` was not sanitized, leading to potential HTML injection and XSS via the Resend API.
+**Learning:** External-facing APIs (like serverless functions) must not trust incoming payloads. Furthermore, any user input embedded into HTML emails must be properly escaped, similar to how it is done for web clients. The admin email was also hardcoded, which is bad practice.
+**Prevention:** Always use `supabase.auth.getUser()` in server routes that perform sensitive actions. Enforce strict destination address controls. Always use an `escapeHtml` utility when constructing raw HTML email templates.
