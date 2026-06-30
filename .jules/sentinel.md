@@ -1,0 +1,4 @@
+## 2024-06-30 - Serverless Function Authenticated Open Relay Prevention
+**Vulnerability:** The `/api/send-email/route.ts` API route lacked authentication and authorization checks. Anyone could send requests to it and use the configured Resend API key to send emails to any address (open relay), potentially leading to spam, abuse, and quota exhaustion.
+**Learning:** Serverless endpoints acting as proxies or relays for sensitive operations (like sending emails) must strictly validate the sender's identity using the application's authentication system (e.g., Supabase `createServerClient` with cookies) and enforce authorization rules. Relying solely on client-side state (like an admin flag in a Zustand store) is insufficient for securing backend API routes.
+**Prevention:** Always implement server-side authentication (`supabase.auth.getUser()`) for protected API routes and enforce scope restrictions (e.g., non-admins can only send to the admin address).
