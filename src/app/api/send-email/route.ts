@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { Resend } from 'resend';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_xxxxxxxxx');
 
@@ -14,12 +17,52 @@ const qstashClient = process.env.QSTASH_TOKEN
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { to, subject, html } = await request.json();
 
     if (!to || !subject || !html) {
       return NextResponse.json(
         { error: 'Missing required fields: to, subject, html' },
         { status: 400 }
+      );
+    }
+
+    // Security check: Only admins can send to non-admin emails
+    const isAdmin = user.app_metadata?.role === 'admin';
+    const targetAdminEmail = process.env.ADMIN_EMAIL || ADMIN_EMAIL;
+    if (!isAdmin && to !== targetAdminEmail) {
+      return NextResponse.json(
+        { error: 'Forbidden: Non-admins can only send emails to the admin address' },
+        { status: 403 }
       );
     }
 

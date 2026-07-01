@@ -1,0 +1,4 @@
+## 2024-05-31 - Fix Authenticated Open Relay in API Endpoint
+**Vulnerability:** The `/api/send-email` endpoint lacked authentication and authorization checks. Any user could send arbitrary emails to any address via the application's email provider.
+**Learning:** Next.js API endpoints communicating with third-party services (like Resend via QStash) must implement their own authentication checks using `@supabase/ssr` to verify the sender, even if the client-side UI only exposes the endpoint to logged-in users.
+**Prevention:** Serverless functions acting as email relays must strictly validate the sender's identity via Supabase auth (`createServerClient` and `supabase.auth.getUser()`) and restrict the recipient scope (e.g., non-admins can only send to the admin email address) to prevent authenticated open relays. Hardcoded emails in frontends should be replaced with shared constants.
