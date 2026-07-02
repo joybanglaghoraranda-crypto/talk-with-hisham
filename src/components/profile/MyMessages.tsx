@@ -42,8 +42,9 @@ export default function MyMessages() {
 
       // Send email notification using Resend
       try {
+        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'joybanglaghoraranda@gmail.com';
         await sendEmail({
-          to: 'joybanglaghoraranda@gmail.com',
+          to: adminEmail,
           subject: `New Private Message from ${user.email || 'User'}`,
           html: `
             <h3>New Message Received</h3>
