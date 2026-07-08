@@ -26,7 +26,7 @@ export const SOCIAL_LINKS = [
 export const FEED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'] as const;
 export const CHAT_EMOJIS = ['👍', '❤️', '😂', '😮', '😢'] as const;
 
-export const ADMIN_EMAIL = 'ibnenurakondo@gmail.com';
+export const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'ibnenurakondo@gmail.com';
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://twhisham.vercel.app';
 

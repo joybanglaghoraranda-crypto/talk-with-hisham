@@ -92,3 +92,15 @@ export function sanitizeUrl(url: string | null | undefined): string {
   }
   return '';
 }
+
+/**
+ * Escapes characters that have special meaning in HTML to prevent XSS/HTML injection.
+ */
+export function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
