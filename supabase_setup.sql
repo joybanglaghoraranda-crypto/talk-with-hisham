@@ -75,6 +75,37 @@ CREATE POLICY "Authenticated users can send messages."
 CREATE POLICY "Authenticated users can update message reactions." 
   ON messages FOR UPDATE USING (auth.role() = 'authenticated');
 
+-- TRIGGER: Secure message updates (Prevent content spoofing by other users)
+-- Although the RLS policy allows ANY authenticated user to update a message,
+-- this trigger restricts what columns they can change. If you aren't the sender,
+-- you can ONLY change non-core fields (like reactions or read_by).
+CREATE OR REPLACE FUNCTION check_message_update_security()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- If the user is the original sender, they can update anything.
+  IF auth.uid() = OLD.sender_id THEN
+    RETURN NEW;
+  END IF;
+
+  -- Otherwise, verify core fields aren't being modified.
+  IF OLD.id IS DISTINCT FROM NEW.id OR
+     OLD.sender_id IS DISTINCT FROM NEW.sender_id OR
+     OLD.content IS DISTINCT FROM NEW.content OR
+     OLD.image_url IS DISTINCT FROM NEW.image_url OR
+     OLD.created_at IS DISTINCT FROM NEW.created_at THEN
+    RAISE EXCEPTION 'Unauthorized: You can only update reactions and read receipts on other users messages';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS enforce_message_update_security ON messages;
+CREATE TRIGGER enforce_message_update_security
+  BEFORE UPDATE ON messages
+  FOR EACH ROW
+  EXECUTE FUNCTION check_message_update_security();
+
 -- STORAGE POLICIES (for bucket 'avatars' and 'media')
 -- Allow public read access
 -- CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING ( bucket_id = 'avatars' OR bucket_id = 'media' );
