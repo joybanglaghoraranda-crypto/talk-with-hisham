@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Send, Loader2, Lock, Mail, MessageSquare, Clock, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, escapeHtml } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { PrivateMessage } from '@/lib/types';
 import { sendEmail } from '@/lib/resend';
@@ -47,10 +47,10 @@ export default function MyMessages() {
           subject: `New Private Message from ${user.email || 'User'}`,
           html: `
             <h3>New Message Received</h3>
-            <p><strong>Sender:</strong> ${user.email}</p>
+            <p><strong>Sender:</strong> ${escapeHtml(user.email || 'User')}</p>
             <p><strong>Message:</strong></p>
             <div style="padding: 12px; background-color: #f3f4f6; border-left: 4px solid #6366f1; border-radius: 4px; font-style: italic;">
-              "${messageContent}"
+              "${escapeHtml(messageContent)}"
             </div>
             <p>Login to your <a href="${window.location.origin}/admin">Admin Dashboard</a> to reply.</p>
           `,
