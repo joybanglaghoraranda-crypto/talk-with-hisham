@@ -9,6 +9,7 @@ import { formatRelativeTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { PrivateMessage } from '@/lib/types';
 import { sendEmail } from '@/lib/resend';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 export default function MyMessages() {
   const { user } = useAuthStore();
@@ -43,7 +44,7 @@ export default function MyMessages() {
       // Send email notification using Resend
       try {
         await sendEmail({
-          to: 'joybanglaghoraranda@gmail.com',
+          to: ADMIN_EMAIL,
           subject: `New Private Message from ${user.email || 'User'}`,
           html: `
             <h3>New Message Received</h3>
