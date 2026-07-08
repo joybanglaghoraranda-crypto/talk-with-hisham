@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { Resend } from 'resend';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_xxxxxxxxx');
 
@@ -14,12 +16,46 @@ const qstashClient = process.env.QSTASH_TOKEN
 
 export async function POST(request: Request) {
   try {
+    // SECURITY FIX: Authenticate the user to prevent open relay abuse
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll() {
+            // Read-only in this context
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { to, subject, html } = await request.json();
 
     if (!to || !subject || !html) {
       return NextResponse.json(
         { error: 'Missing required fields: to, subject, html' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY FIX: Restrict sending to arbitrary addresses unless admin
+    const isAdmin = user.app_metadata?.role === 'admin';
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'joybanglaghoraranda@gmail.com';
+
+    if (!isAdmin && to !== adminEmail) {
+      return NextResponse.json(
+        { error: 'Forbidden: Non-admins can only send emails to the admin' },
+        { status: 403 }
       );
     }
 
