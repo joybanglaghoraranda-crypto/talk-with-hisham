@@ -34,26 +34,22 @@ export default function PublicFeed() {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('*, profiles(username, full_name, avatar_url)')
+        .select('*, profiles(username, full_name, avatar_url), comments(count)')
         .order('created_at', { ascending: false })
         .limit(30);
       if (error) throw error;
       setPosts(data || []);
 
-      // Fetch comment counts for all posts
       if (data && data.length > 0) {
-        const postIds = data.map((p: Post) => p.id);
-        const { data: countData } = await supabase
-          .from('comments')
-          .select('post_id')
-          .in('post_id', postIds);
-        if (countData) {
-          const counts: Record<string, number> = {};
-          countData.forEach((c: { post_id: string }) => {
-            counts[c.post_id] = (counts[c.post_id] || 0) + 1;
-          });
-          setCommentCounts(counts);
-        }
+        const counts: Record<string, number> = {};
+        data.forEach((p: any) => {
+          if (p.comments && p.comments.length > 0) {
+            counts[p.id] = p.comments[0].count;
+          } else {
+            counts[p.id] = 0;
+          }
+        });
+        setCommentCounts(counts);
       }
     } catch (err) {
       console.error('Error fetching posts:', err);
