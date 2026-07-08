@@ -55,7 +55,7 @@ export default function ProfileSettings() {
       }).eq('id', user.id);
       if (error) throw error;
       toast.success('Profile updated!');
-    } catch (err: any) { toast.error(err.message || 'Failed to save'); } finally { setSaving(false); }
+    } catch (err) { toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to save'); } finally { setSaving(false); }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,7 +66,7 @@ export default function ProfileSettings() {
       const url = await uploadFile(supabase as any, 'media', `avatars/${user.id}_${Date.now()}`, file);
       setAvatarUrl(url);
       toast.success('Avatar uploaded');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Avatar upload error:', err);
       toast.error('Upload failed');
     }
@@ -80,7 +80,7 @@ export default function ProfileSettings() {
       const url = await uploadFile(supabase as any, 'media', `covers/${user.id}_${Date.now()}`, file);
       setCoverUrl(url);
       toast.success('Cover uploaded');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Cover upload error:', err);
       toast.error('Upload failed');
     }
@@ -102,8 +102,8 @@ export default function ProfileSettings() {
       toast.success('Password updated successfully!');
       setNewPassword('');
       setConfirmNewPassword('');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update password');
+    } catch (err) {
+      toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to update password');
     } finally {
       setUpdatingPassword(false);
     }

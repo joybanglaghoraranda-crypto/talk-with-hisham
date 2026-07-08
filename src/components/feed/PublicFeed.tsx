@@ -93,8 +93,8 @@ export default function PublicFeed() {
       setNewPost('');
       setPostImage(null);
       setPostImagePreview(null);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to post');
+    } catch (err) {
+      toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to post');
     } finally {
       setPosting(false);
     }

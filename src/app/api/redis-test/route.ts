@@ -12,9 +12,9 @@ export async function GET() {
       total_test_views: views,
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

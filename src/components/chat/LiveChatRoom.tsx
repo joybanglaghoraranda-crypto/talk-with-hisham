@@ -255,8 +255,8 @@ export default function LiveChatRoom() {
         setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
         throw error;
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to send');
+    } catch (err) {
+      toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to send');
     } finally {
       setSending(false);
       textareaRef.current?.focus();
@@ -296,8 +296,8 @@ export default function LiveChatRoom() {
       if (error) throw error;
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
       toast.success('Message deleted');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete');
+    } catch (err) {
+      toast.error((err instanceof Error ? err.message : String(err)) || 'Failed to delete');
     }
   };
 
