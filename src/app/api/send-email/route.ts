@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { Resend } from 'resend';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_xxxxxxxxx');
 
@@ -20,6 +22,49 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Missing required fields: to, subject, html' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY FIX: Authenticate the user and prevent open relay
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Ignore if setAll is called from a Server Component / middleware context
+            }
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const isAdmin = user.app_metadata?.role === 'admin';
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'ibnenurakondo@gmail.com';
+
+    // Non-admins can only send emails to the admin
+    // Handle both string and array for the `to` field
+    const toAddresses = Array.isArray(to) ? to : [to];
+    const onlySendsToAdmin = toAddresses.every(email => email === adminEmail);
+
+    if (!isAdmin && !onlySendsToAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Non-admins can only send emails to the admin' },
+        { status: 403 }
       );
     }
 
