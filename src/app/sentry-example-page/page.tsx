@@ -13,7 +13,7 @@ export default function SentryExamplePage() {
     // We intentionally call an undefined function to trigger an error
     setTimeout(() => {
       try {
-        // @ts-ignore
+        // @ts-expect-error
         myUndefinedFunction();
       } catch (err) {
         // Throw it globally so Sentry captures it as an unhandled error
