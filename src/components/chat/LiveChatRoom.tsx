@@ -166,8 +166,8 @@ export default function LiveChatRoom() {
       const newReadBy = [...new Set([...(m.read_by || []), user.id])];
       supabase.from('messages').update({ read_by: newReadBy }).eq('id', m.id);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
+
+  }, [loading, messages, supabase, user]);
 
   /* ── Auto-scroll on first load ── */
   useEffect(() => {
