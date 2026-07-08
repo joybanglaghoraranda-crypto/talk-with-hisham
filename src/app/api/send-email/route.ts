@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { Resend } from 'resend';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_xxxxxxxxx');
 
@@ -14,12 +17,53 @@ const qstashClient = process.env.QSTASH_TOKEN
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Ignore if setAll is called from a Server Component
+            }
+          },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized: You must be logged in to send emails.' },
+        { status: 401 }
+      );
+    }
+
     const { to, subject, html } = await request.json();
 
     if (!to || !subject || !html) {
       return NextResponse.json(
         { error: 'Missing required fields: to, subject, html' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY FIX: Only allow the admin to send emails to arbitrary addresses.
+    // Non-admins can only send emails TO the admin.
+    const isAdmin = user.email === ADMIN_EMAIL;
+    if (!isAdmin && to !== ADMIN_EMAIL) {
+      return NextResponse.json(
+        { error: 'Forbidden: You are only allowed to send emails to the administrator.' },
+        { status: 403 }
       );
     }
 
