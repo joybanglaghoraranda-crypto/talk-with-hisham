@@ -37,3 +37,6 @@ CREATE POLICY "Senders can view their own private messages"
 -- In Supabase Dashboard > Database > Replication, enable the private_messages table
 -- Or run:
 -- ALTER PUBLICATION supabase_realtime ADD TABLE private_messages;
+
+-- 7. Add read_by column to messages (for read receipts)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_by JSONB DEFAULT '[]'::jsonb;
