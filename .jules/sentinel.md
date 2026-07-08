@@ -1,0 +1,4 @@
+## 2025-02-23 - [Fix Open Relay Vulnerability in send-email route]
+**Vulnerability:** The `/api/send-email/route.ts` endpoint allowed any unauthenticated user to send emails to any address, potentially acting as an open email relay for spam or phishing.
+**Learning:** This codebase uses Supabase for backend/authentication. Serverless functions acting as email relays should always strictly validate the sender's identity using Supabase auth (`createServerClient`) and restrict the recipient scope, especially for non-admins, to prevent unauthenticated access. Always ensure the authorization fallback (like checking if the admin email exists) is fail-secure, not fail-open.
+**Prevention:** Implement `createServerClient` to authenticate the user and add robust authorization checks (`user.app_metadata?.role === 'admin'`) before processing external service requests (like sending emails) in API routes.
