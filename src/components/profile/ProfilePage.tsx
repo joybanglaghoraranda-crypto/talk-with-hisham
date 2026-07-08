@@ -16,7 +16,7 @@ const HISHAM_PROFILE: Profile = {
   username: 'hisham',
   full_name: 'Muhibbullah Hisham',
   bio: 'Educator, researcher, and lifelong learner. Integrating classical Islamic scholarship with modern thought.',
-  avatar_url: '/images/hisham.png',
+  avatar_url: '',
 };
 
 export default function ProfilePage({ userId }: { userId?: string }) {
@@ -119,7 +119,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
               <img src={profileCoverUrl} alt="Cover" className="w-full h-full object-cover" />
             ) : (
               isHisham && (
-                <div className="absolute inset-0 bg-[url('/images/hisham.png')] bg-cover bg-center opacity-10 blur-sm" />
+                <div className="absolute inset-0 bg-brand-600/20 opacity-50 blur-sm" />
               )
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-surface-0 via-transparent to-transparent" />

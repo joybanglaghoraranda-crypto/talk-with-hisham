@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MessageSquareText, ArrowRight } from 'lucide-react';
+import { MessageSquareText, ArrowRight, Leaf } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { SOCIAL_LINKS } from '@/lib/constants';
@@ -28,7 +28,7 @@ export default function HomePage() {
     <>
       {/* Hero Background — only on homepage */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-[url('/images/hisham-backgroud.png')] bg-cover bg-center opacity-20 grayscale-[0.2]" />
+        <div className="absolute inset-0 bg-brand-500/10 mesh-bg" />
         <div className="absolute inset-0 bg-gradient-to-b from-surface-0/70 via-surface-0/40 to-surface-0" />
       </div>
 
@@ -97,7 +97,7 @@ export default function HomePage() {
             </motion.div>
           </div>
 
-          {/* Right — Profile Image */}
+          {/* Right — Profile Image / Nature Motif */}
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -109,14 +109,8 @@ export default function HomePage() {
               <div className="absolute -inset-3 bg-gradient-to-r from-brand-500/15 to-accent-500/15 rounded-3xl blur-2xl opacity-60 group-hover:opacity-80 transition-opacity duration-700" />
 
               <div className="relative glass-card p-2.5 group overflow-hidden shadow-2xl">
-                <div className="w-60 h-60 md:w-80 md:h-80 rounded-2xl overflow-hidden relative border border-white/8">
-                  <Image
-                    src="/images/hisham.png"
-                    alt="Muhibbullah Hisham"
-                    fill
-                    className="object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-1000 scale-105 group-hover:scale-100 brightness-90 group-hover:brightness-110"
-                    priority
-                  />
+                <div className="w-60 h-60 md:w-80 md:h-80 rounded-2xl overflow-hidden relative border border-white/8 bg-gradient-to-br from-surface-100 to-surface-200 flex items-center justify-center">
+                  <Leaf size={120} className="text-brand-500/40 group-hover:text-brand-500/80 transition-all duration-1000 scale-105 group-hover:scale-100" />
                   <div className="absolute inset-0 bg-gradient-to-t from-brand-500/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                 </div>
 
