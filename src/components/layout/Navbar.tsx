@@ -12,10 +12,14 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { useNotificationStore } from '@/stores/notification-store';
 import AuthModal from '@/components/auth/AuthModal';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import { cn, formatRelativeTime, sanitizeUrl } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 export default function Navbar() {
+  const { locale } = useLanguageStore();
   const { user, isAdmin, signOut } = useAuthStore();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
   const pathname = usePathname();
@@ -61,15 +65,15 @@ export default function Navbar() {
   }, [pathname]);
 
   const NAV_ITEMS = [
-    { href: '/', icon: Home, label: 'Home', auth: false },
-    { href: '/about', icon: Info, label: 'About', auth: false },
+    { href: '/', icon: Home, label: t('nav.home', locale), auth: false },
+    { href: '/about', icon: Info, label: t('nav.about', locale), auth: false },
     ...(user ? [
-      { href: '/feed', icon: Rss, label: 'Feed', auth: true },
-      { href: '/chat', icon: MessageSquare, label: 'Chat', auth: true },
-      { href: '/inbox', icon: Mail, label: 'Inbox', auth: true },
+      { href: '/feed', icon: Rss, label: t('nav.feed', locale), auth: true },
+      { href: '/chat', icon: MessageSquare, label: t('nav.chat', locale), auth: true },
+      { href: '/inbox', icon: Mail, label: t('nav.inbox', locale), auth: true },
     ] : []),
     ...(isAdmin ? [
-      { href: '/admin', icon: Shield, label: 'Admin', auth: true },
+      { href: '/admin', icon: Shield, label: t('nav.admin', locale), auth: true },
     ] : []),
   ];
 
@@ -103,10 +107,10 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-brand-500/20 group-hover:scale-110 transition-transform">
-            H
+            MH
           </div>
           <span className="font-heading font-bold text-base text-white hidden sm:inline tracking-tight">
-            Talk with Hisham
+            Muhibbullah Hisham
           </span>
         </Link>
 
@@ -138,6 +142,7 @@ export default function Navbar() {
 
         {/* Right Side */}
         <div className="hidden md:flex items-center gap-1.5">
+          <LanguageSwitcher />
           {/* Notification Bell */}
           {user && (
             <div className="relative" ref={notifRef}>
@@ -167,15 +172,15 @@ export default function Navbar() {
                     className="absolute right-0 top-full mt-2 w-80 max-h-[420px] bg-surface-100/98 backdrop-blur-2xl border border-white/8 rounded-2xl shadow-2xl overflow-hidden"
                   >
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                      <h3 className="text-sm font-heading font-bold text-white">Notifications</h3>
+                      <h3 className="text-sm font-heading font-bold text-white">{t('notif.title', locale)}</h3>
                       <div className="flex items-center gap-1">
                         {unreadCount > 0 && (
-                          <button onClick={markAllAsRead} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors" title="Mark all read">
+                          <button onClick={markAllAsRead} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors" title={t('nav.mark_read', locale)}>
                             <CheckCheck size={14} />
                           </button>
                         )}
                         {notifications.length > 0 && (
-                          <button onClick={clearAll} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-accent-400 transition-colors" title="Clear all">
+                          <button onClick={clearAll} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-accent-400 transition-colors" title={t('nav.clear_all', locale)}>
                             <Trash2 size={14} />
                           </button>
                         )}
@@ -185,7 +190,7 @@ export default function Navbar() {
                       {notifications.length === 0 ? (
                         <div className="py-12 text-center">
                           <Bell className="mx-auto text-white/10 mb-3" size={28} />
-                          <p className="text-white/25 text-xs">No notifications yet</p>
+                          <p className="text-white/25 text-xs">{t('notif.empty', locale)}</p>
                         </div>
                       ) : (
                         notifications.slice(0, 20).map((notif) => (

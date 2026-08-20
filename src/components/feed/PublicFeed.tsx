@@ -4,17 +4,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Loader2, ImagePlus, X, MessageCircle, Trash2, Share2,
-  Smile, BookOpen, Link2, Check, User,
+  Smile, BookOpen, Link2, Check, User, Globe,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { FEED_EMOJIS } from '@/lib/constants';
 import { formatRelativeTime, uploadFile, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import type { Post, Comment } from '@/lib/types';
 import Link from 'next/link';
 
 export default function PublicFeed() {
+  const { locale } = useLanguageStore();
   const { user, isAdmin } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +92,7 @@ export default function PublicFeed() {
         reactions: {},
       });
       if (error) throw error;
-      toast.success('Post published!');
+      toast.success(t('feed.published', locale));
       setNewPost('');
       setPostImage(null);
       setPostImagePreview(null);
@@ -139,7 +142,7 @@ export default function PublicFeed() {
     if (!confirmed) return;
     await supabase.from('posts').delete().eq('id', postId);
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-    toast.success('Post deleted');
+    toast.success(t('feed.deleted', locale));
   };
 
   const fetchComments = async (postId: string) => {
@@ -175,7 +178,7 @@ export default function PublicFeed() {
       content,
     });
     if (error) {
-      toast.error('Failed to post comment');
+      toast.error(t('post.cmt_fail', locale));
       return;
     }
     setNewComments((prev) => ({ ...prev, [postId]: '' }));
@@ -204,10 +207,10 @@ export default function PublicFeed() {
     try {
       await navigator.clipboard.writeText(postUrl);
       setCopiedPostId(post.id);
-      toast.success('Post link copied!');
+      toast.success(t('feed.link_copied', locale));
       setTimeout(() => setCopiedPostId(null), 2000);
     } catch {
-      toast.error('Failed to copy link');
+      toast.error(t('post.copy_fail', locale));
     }
   };
 
@@ -215,7 +218,7 @@ export default function PublicFeed() {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be under 5MB');
+        toast.error(t('chat.img_big', locale));
         return;
       }
       setPostImage(file);
@@ -235,8 +238,8 @@ export default function PublicFeed() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
         <BookOpen className="text-white/10 mb-4" size={48} />
-        <h2 className="text-xl font-heading font-bold text-white mb-2">Feed Access Required</h2>
-        <p className="text-white/35 text-sm">Sign in to view posts and join the conversation.</p>
+        <h2 className="text-xl font-heading font-bold text-white mb-2">{t('feed.access_title', locale)}</h2>
+        <p className="text-white/35 text-sm">{t('feed.access_desc', locale)}</p>
       </div>
     );
   }
@@ -244,8 +247,8 @@ export default function PublicFeed() {
   return (
     <div className="max-w-2xl mx-auto py-6">
       <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight mb-1">Community Feed</h1>
-        <p className="text-white/30 text-sm">Follow the discourse, react, and share your thoughts.</p>
+        <h1 className="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight mb-1">{t('feed.title', locale)}</h1>
+        <p className="text-white/30 text-sm">{t('feed.subtitle', locale)}</p>
       </div>
 
       {/* Post Composer (Admin Only) */}
@@ -258,7 +261,7 @@ export default function PublicFeed() {
           <textarea
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
-            placeholder="Share your thoughts with the community..."
+            placeholder={t("feed.placeholder", locale)}
             className="w-full bg-transparent text-white placeholder:text-white/20 outline-none resize-none text-sm min-h-[80px] leading-relaxed"
           />
           {postImagePreview && (
@@ -272,7 +275,7 @@ export default function PublicFeed() {
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
             <label className="flex items-center gap-2 text-white/30 hover:text-white/60 cursor-pointer transition-colors text-xs">
               <ImagePlus size={16} />
-              <span>Add Image</span>
+              <span>{t('feed.add_image', locale)}</span>
               <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
             </label>
             <button
@@ -307,7 +310,7 @@ export default function PublicFeed() {
       ) : posts.length === 0 ? (
         <div className="glass-card py-16 text-center">
           <BookOpen className="mx-auto text-white/10 mb-3" size={40} />
-          <p className="text-white/25 text-sm">No posts yet. Stay tuned!</p>
+          <p className="text-white/25 text-sm">{t('feed.empty_alt', locale)}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -321,10 +324,10 @@ export default function PublicFeed() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="glass-card glass-card-hover p-5 group"
+                className="bg-white/[0.045] border border-white/[0.07] rounded-xl overflow-hidden group shadow-lg shadow-black/10"
               >
                 {/* Post Header */}
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2">
                   <div className="w-10 h-10 rounded-full bg-surface-300 flex items-center justify-center text-white font-bold text-xs shadow-lg overflow-hidden">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -336,14 +339,14 @@ export default function PublicFeed() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-white truncate">{post.profiles?.full_name || post.profiles?.username || 'Unknown'}</p>
                       {post.author_id === user?.id || post.profiles?.username === 'hisham' ? (
-                        <span className="text-[9px] bg-brand-500/10 text-brand-400 px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider">Author</span>
+                        <span className="text-[9px] bg-brand-500/10 text-brand-400 px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider">{t('post.author', locale)}</span>
                       ) : null}
                     </div>
-                    <p className="text-[11px] text-white/25">@{post.profiles?.username} · {formatRelativeTime(post.created_at)}</p>
+                    <p className="text-[11px] text-white/25">@{post.profiles?.username} · {formatRelativeTime(post.created_at)} · <Globe size={10} className="inline text-white/20" /></p>
                   </div>
                   {isAdmin && (
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleDelete(post.id)} className="p-1.5 text-white/20 hover:text-accent-400 transition-colors rounded-lg hover:bg-white/5" title="Delete">
+                      <button onClick={() => handleDelete(post.id)} className="p-1.5 text-white/20 hover:text-accent-400 transition-colors rounded-lg hover:bg-white/5" title={t('feed.delete', locale)}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -352,48 +355,57 @@ export default function PublicFeed() {
 
                 {/* Post Content */}
                 <Link href={`/feed/post/${post.id}`} className="block">
-                  <p className="text-white/75 leading-relaxed text-[15px] mb-3 whitespace-pre-wrap">{post.content}</p>
+                  <p className="text-white/75 leading-relaxed text-[15px] px-4 py-1 whitespace-pre-wrap">{post.content}</p>
                 </Link>
 
                 {post.image_url && (
-                  <Link href={`/feed/post/${post.id}`} className="block mb-3 rounded-xl overflow-hidden border border-white/5">
+                  <Link href={`/feed/post/${post.id}`} className="block mt-2 overflow-hidden border-y border-white/5 bg-surface-0/40">
                     <img src={sanitizeUrl(post.image_url)} alt="Post attachment" className="w-full max-h-96 object-cover" loading="lazy" />
                   </Link>
                 )}
 
-                {/* Reactions */}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {FEED_EMOJIS.map((emoji) => {
-                    const count = getReactionCount(post, emoji);
-                    const reacted = hasReacted(post, emoji);
-                    if (count === 0 && activeEmoji !== post.id) return null;
-                    return (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReaction(post.id, emoji)}
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs transition-all ${
-                          reacted
-                            ? 'bg-brand-500/15 border border-brand-500/30 text-brand-300'
-                            : 'bg-white/3 border border-white/8 text-white/40 hover:bg-white/5'
-                        }`}
-                      >
-                        <span className="text-sm">{emoji}</span>
-                        {count > 0 && <span className="font-medium">{count}</span>}
-                      </button>
-                    );
-                  })}
+                {/* Stats Row: reactions + comments (Facebook style) */}
+                <div className="flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    {FEED_EMOJIS.some((e) => getReactionCount(post, e) > 0) ? (
+                      <>
+                        <div className="flex -space-x-1.5">
+                          {FEED_EMOJIS.filter((e) => getReactionCount(post, e) > 0).slice(0, 3).map((e) => (
+                            <span key={e} className="w-[18px] h-[18px] rounded-full bg-surface-200 border border-surface-100 flex items-center justify-center text-[10px]">{e}</span>
+                          ))}
+                        </div>
+                        <span className="text-xs text-white/40">{FEED_EMOJIS.reduce((s, e) => s + getReactionCount(post, e), 0)}</span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-white/20">{t('feed.no_reactions', locale)}</span>
+                    )}
+                  </div>
+                  <button onClick={() => toggleComments(post.id)} className="text-xs text-white/40 hover:text-white hover:underline transition-colors">
+                    {commentCounts[post.id] ? `${commentCounts[post.id]} comment${commentCounts[post.id] > 1 ? 's' : ''}` : 'Comment'}
+                  </button>
                 </div>
 
-                {/* Actions: React, Comment, Share */}
-                <div className="flex items-center gap-1 pt-2 border-t border-white/5">
-                  <button onClick={() => setActiveEmoji(activeEmoji === post.id ? null : post.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all" title="React">
-                    <Smile size={14} /> React
+                {/* Action Bar: Like / Comment / Share (Facebook style) */}
+                <div className="flex items-stretch border-t border-white/[0.06]">
+                  <button
+                    onClick={() => setActiveEmoji(activeEmoji === post.id ? null : post.id)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors hover:bg-white/[0.03] ${activeEmoji === post.id ? 'text-brand-400' : 'text-white/40 hover:text-white'}`}
+                    title={t('chat.react', locale)}
+                  >
+                    <Smile size={14} /> {t('feed.like', locale)}
                   </button>
-                  <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all">
-                    <MessageCircle size={14} /> {commentCounts[post.id] ? `${commentCounts[post.id]}` : ''} Comment
+                  <button
+                    onClick={() => toggleComments(post.id)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-white/40 hover:text-white hover:bg-white/[0.03] transition-colors"
+                  >
+                    <MessageCircle size={14} /> {t('feed.comment', locale)}
                   </button>
-                  <button onClick={() => handleShare(post)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all" title="Share">
-                    {copiedPostId === post.id ? <Check size={14} className="text-green-400" /> : <Share2 size={14} />} Share
+                  <button
+                    onClick={() => handleShare(post)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-white/40 hover:text-white hover:bg-white/[0.03] transition-colors"
+                    title={t('feed.share', locale)}
+                  >
+                    {copiedPostId === post.id ? <Check size={14} className="text-green-400" /> : <Share2 size={14} />} {t('feed.share', locale)}
                   </button>
                 </div>
 
@@ -406,7 +418,7 @@ export default function PublicFeed() {
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="flex gap-1.5 pt-3">
+                      <div className="flex gap-1.5 pt-3 border-t border-white/[0.06] px-4 pb-3">
                         {FEED_EMOJIS.map((emoji) => (
                           <button
                             key={emoji}
@@ -430,7 +442,7 @@ export default function PublicFeed() {
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
+                      <div className="mt-1 pt-3 border-t border-white/[0.06] px-4 pb-4 space-y-3">
                         {(comments[post.id] || []).map((comment) => {
                           const commentAvatar = comment.profiles?.avatar_url ? sanitizeUrl(comment.profiles.avatar_url) : '';
                           return (
@@ -456,17 +468,17 @@ export default function PublicFeed() {
                         <div className="flex gap-2 items-center">
                           <input
                             type="text"
-                            placeholder="Write a comment..."
+                            placeholder={t("feed.comment_ph", locale)}
                             value={newComments[post.id] || ''}
                             onChange={(e) => setNewComments((prev) => ({ ...prev, [post.id]: e.target.value }))}
                             onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
-                            className="flex-1 bg-white/3 border border-white/8 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-brand-500/30"
+                            className="flex-1 bg-white/3 border border-white/8 rounded-full px-4 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-brand-500/30"
                           />
                           <button
                             onClick={() => handleComment(post.id)}
                             disabled={!newComments[post.id]?.trim()}
-                            className="p-2 bg-brand-500/20 rounded-lg text-brand-400 hover:bg-brand-500/30 disabled:opacity-20 transition-all"
-                            title="Send comment"
+                            className="p-2 bg-brand-500/20 rounded-full text-brand-400 hover:bg-brand-500/30 disabled:opacity-20 transition-all"
+                            title={t('post.send_cmt', locale)}
                           >
                             <Send size={13} />
                           </button>

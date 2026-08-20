@@ -5,13 +5,16 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import {
   Send, Loader2, ImagePlus, X, Search, Reply, Smile,
   MessageSquare, ArrowDown, User, Copy, Trash2,
-  Check, CheckCheck, Share2, Info,
+  Check, CheckCheck, Share2, Info, Volume2, VolumeX,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { CHAT_EMOJIS } from '@/lib/constants';
 import { formatTimestamp, getDateLabel, uploadFile, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
+import { playMessageSound } from '@/lib/sound';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import type { ChatMessage } from '@/lib/types';
 
 interface ChatPresence {
@@ -25,6 +28,8 @@ interface ChatPresence {
    Main Component
    ═══════════════════════════════════════════ */
 export default function LiveChatRoom() {
+  const { locale } = useLanguageStore();
+  const rtl = locale === 'ar' || locale === 'ur';
   const { user } = useAuthStore();
 
   /* ── State ── */
@@ -45,6 +50,7 @@ export default function LiveChatRoom() {
   const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const [infoMessage, setInfoMessage] = useState<ChatMessage | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [soundOn, setSoundOn] = useState<boolean>(() => (typeof window !== 'undefined' ? localStorage.getItem('chat-sound') !== 'off' : true));
 
   /* ── Refs ── */
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -52,6 +58,7 @@ export default function LiveChatRoom() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<any>(null);
+  const soundOnRef = useRef(true);
   const markedReadRef = useRef<Set<string>>(new Set());
   const supabase = getSupabaseClient();
 
@@ -105,6 +112,10 @@ export default function LiveChatRoom() {
           const newReadBy = [...new Set([...(newMsg.read_by || []), user.id])];
           supabase.from('messages').update({ read_by: newReadBy }).eq('id', newMsg.id);
           setMessages(prev => prev.map(m => m.id === newMsg.id ? { ...m, read_by: newReadBy } : m));
+          // Play notification sound (Telegram-style) unless muted
+          if (soundOnRef.current && document.visibilityState === 'hidden') {
+            playMessageSound();
+          }
         }
         setTimeout(() => scrollToBottom(), 100);
       })
@@ -256,7 +267,7 @@ export default function LiveChatRoom() {
         throw error;
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to send');
+      toast.error(err.message || t('chat.sent_failed', locale));
     } finally {
       setSending(false);
       textareaRef.current?.focus();
@@ -295,7 +306,7 @@ export default function LiveChatRoom() {
       const { error } = await supabase.from('messages').delete().eq('id', msgId);
       if (error) throw error;
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
-      toast.success('Message deleted');
+      toast.success(t('chat.deleted', locale));
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete');
     }
@@ -309,7 +320,7 @@ export default function LiveChatRoom() {
       } catch { /* user cancelled */ }
     } else {
       navigator.clipboard.writeText(msg.content);
-      toast.success('Copied to clipboard');
+      toast.success(t('chat.copied', locale));
     }
     setActiveMenuMessage(null);
   };
@@ -318,7 +329,7 @@ export default function LiveChatRoom() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
+      if (file.size > 5 * 1024 * 1024) { toast.error(t('chat.img_big', locale)); return; }
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
@@ -331,14 +342,15 @@ export default function LiveChatRoom() {
 
   const findReplyMessage = (id: string | null | undefined) => messages.find((m) => m.id === id);
   const typingDisplay = Array.from(typingUsers.values());
+  useEffect(() => { soundOnRef.current = soundOn; localStorage.setItem('chat-sound', soundOn ? 'on' : 'off'); }, [soundOn]);
 
   /* ── Not logged in ── */
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
         <MessageSquare className="text-white/10 mb-4" size={48} />
-        <h2 className="text-xl font-heading font-bold text-white mb-2">Chat Access Required</h2>
-        <p className="text-white/35 text-sm">Sign in to join the live conversation.</p>
+        <h2 className="text-xl font-heading font-bold text-white mb-2">{t('chat.access_title', locale)}</h2>
+        <p className="text-white/35 text-sm">{t('chat.access_desc', locale)}</p>
       </div>
     );
   }
@@ -349,15 +361,17 @@ export default function LiveChatRoom() {
      JSX Render
      ═══════════════════════════════════════════ */
   return (
-    <div className="max-w-3xl mx-auto py-4">
+    <div className="flex flex-col h-dvh bg-[#000000]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#1C1C1E] border-b border-white/[0.06] shrink-0">
         <div>
-          <h1 className="text-xl md:text-2xl font-heading font-bold text-white tracking-tight flex items-center gap-2">
-            <MessageSquare size={20} className="text-brand-400" />
+          <h1 className="text-lg md:text-2xl font-heading font-bold text-white tracking-tight flex items-center gap-2">
+            <span className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#0084FF] flex items-center justify-center shadow-lg shadow-[#0084FF]/25">
+              <MessageSquare size={16} className="text-white" />
+            </span>
             General Debate
           </h1>
-          <p className="text-white/25 text-xs mt-0.5 flex items-center gap-2">
+          <p className="text-white/25 text-xs mt-1 flex items-center gap-2">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-soft-pulse" />
               {onlineCount} online
@@ -368,31 +382,38 @@ export default function LiveChatRoom() {
         <button
           onClick={() => setShowSearch(!showSearch)}
           className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors"
-          title="Search messages"
+          title={t('chat.search', locale)}
         >
           <Search size={18} />
+        </button>
+        <button
+          onClick={() => setSoundOn(!soundOn)}
+          className={`p-2 rounded-lg hover:bg-white/5 transition-colors ${soundOn ? 'text-brand-400' : 'text-white/30 hover:text-white'}`}
+          title={soundOn ? t('chat.sound_on', locale) : t('chat.sound_off', locale)}
+          aria-label={soundOn ? 'Mute message sounds' : 'Enable message sounds'}
+        >
+          {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
         </button>
       </div>
 
       {/* Search */}
       <AnimatePresence>
         {showSearch && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-3">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden shrink-0">
             <input
               type="text"
-              placeholder="Search messages..."
+              placeholder={t("chat.search", locale)}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
-              className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-brand-500/30"
+              className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-brand-500/30 mx-4 my-2"
             />
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Messages Area */}
-      <div ref={containerRef} onScroll={handleScroll} className="glass-card p-0 overflow-hidden relative">
-        <div className="h-[calc(100vh-400px)] md:h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar px-3 py-3 space-y-0.5">
+      <div ref={containerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative px-3 py-2">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 size={24} className="animate-spin text-brand-400" />
@@ -441,13 +462,12 @@ export default function LiveChatRoom() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={() => scrollToBottom()}
-              className="absolute bottom-4 right-4 w-9 h-9 bg-brand-500/90 rounded-full flex items-center justify-center shadow-lg shadow-brand-500/30 hover:scale-110 transition-transform"
+              className={`absolute bottom-4 ${rtl ? 'left-4' : 'right-4'} w-9 h-9 bg-[#0084FF]/90 rounded-full flex items-center justify-center shadow-lg shadow-brand-500/30 hover:scale-110 transition-transform`}
             >
               <ArrowDown size={16} className="text-white" />
             </motion.button>
           )}
         </AnimatePresence>
-      </div>
 
       {/* Typing Indicator */}
       <AnimatePresence>
@@ -456,13 +476,13 @@ export default function LiveChatRoom() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="overflow-hidden shrink-0"
           >
             <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/40">
               <span className="flex gap-0.5">
-                <span className="typing-dot w-1.5 h-1.5 bg-brand-400 rounded-full" style={{ animationDelay: '0ms' }} />
-                <span className="typing-dot w-1.5 h-1.5 bg-brand-400 rounded-full" style={{ animationDelay: '150ms' }} />
-                <span className="typing-dot w-1.5 h-1.5 bg-brand-400 rounded-full" style={{ animationDelay: '300ms' }} />
+                <span className="typing-dot w-1.5 h-1.5 bg-[#0084FF] rounded-full" style={{ animationDelay: '0ms' }} />
+                <span className="typing-dot w-1.5 h-1.5 bg-[#0084FF] rounded-full" style={{ animationDelay: '150ms' }} />
+                <span className="typing-dot w-1.5 h-1.5 bg-[#0084FF] rounded-full" style={{ animationDelay: '300ms' }} />
               </span>
               <span className="italic">
                 {typingDisplay.length === 1
@@ -477,13 +497,13 @@ export default function LiveChatRoom() {
       {/* Reply Bar */}
       <AnimatePresence>
         {replyTo && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-2 bg-brand-500/5 border-l-2 border-brand-500 rounded-t-lg mt-3">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden shrink-0">
+            <div className={`flex items-center gap-2 px-4 py-2 bg-[#0084FF]/5 ${rtl ? 'border-r-2' : 'border-l-2'} border-[#0084FF]`}>
               <Reply size={13} className="text-brand-400" />
               <span className="text-xs text-white/40 truncate flex-1">
                 Replying to <span className="text-brand-400">@{replyTo.profiles?.username}</span>: {replyTo.content.slice(0, 60)}
               </span>
-              <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white transition-colors" title="Close reply">
+              <button onClick={() => setReplyTo(null)} className="text-white/20 hover:text-white transition-colors" title={t('chat.close_reply', locale)}>
                 <X size={14} />
               </button>
             </div>
@@ -493,19 +513,19 @@ export default function LiveChatRoom() {
 
       {/* Image Preview */}
       {imagePreview && (
-        <div className="relative inline-block mt-2">
+        <div className="relative inline-block shrink-0 px-3 pt-2">
           <img src={sanitizeUrl(imagePreview)} alt="Preview" className="max-h-24 rounded-lg border border-white/8" />
-          <button onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute -top-1.5 -right-1.5 bg-surface-200 border border-white/8 p-1 rounded-full text-white/40 hover:text-white" title="Remove image">
+          <button onClick={() => { setImageFile(null); setImagePreview(null); }} className={`absolute -top-1.5 ${rtl ? '-left-1.5' : '-right-1.5'} bg-surface-200 border border-white/8 p-1 rounded-full text-white/40 hover:text-white`} title={t('chat.remove_img', locale)}>
             <X size={10} />
           </button>
         </div>
       )}
 
       {/* Input Area (auto-growing textarea) */}
-      <div className={`flex items-end gap-2 mt-3 glass-card p-2 ${replyTo && !imagePreview ? 'rounded-t-none' : ''}`}>
+      <div className={`flex items-end gap-1.5 bg-[#1C1C1E] border-t border-white/[0.08] px-3 py-2 shrink-0 ${replyTo && !imagePreview ? 'rounded-t-none' : ''}`}>
         <label className="p-2 text-white/25 hover:text-white/50 cursor-pointer transition-colors self-end">
           <ImagePlus size={18} />
-          <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" aria-label="Upload image" />
+          <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" aria-label={t('chat.upload_img', locale)} />
         </label>
         <textarea
           ref={textareaRef}
@@ -514,16 +534,17 @@ export default function LiveChatRoom() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
           }}
-          placeholder="Type your message..."
+          placeholder={t("chat.placeholder", locale)}
           rows={1}
-          className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-white/20 px-1 resize-none max-h-[120px] custom-scrollbar leading-relaxed py-1.5"
+          className="flex-1 bg-transparent outline-none text-sm text-white placeholder:text-white/25 px-1 resize-none max-h-[120px] custom-scrollbar leading-relaxed py-2"
         />
         <button
           onClick={handleSend}
           disabled={sending || (!input.trim() && !imageFile)}
-          className="p-2.5 bg-gradient-to-r from-brand-500 to-accent-500 rounded-lg text-white disabled:opacity-20 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-500/15 self-end"
+          className="w-10 h-10 rounded-full bg-[#0084FF] text-white flex items-center justify-center disabled:opacity-25 hover:bg-[#4da3f0] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-500/25 self-end"
+          title={t('chat.send_msg', locale)}
         >
-          {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+          {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className={rtl ? 'mr-0.5' : 'ml-0.5'} />}
         </button>
       </div>
 
@@ -565,7 +586,7 @@ export default function LiveChatRoom() {
 
               {/* Quick Reactions */}
               <div className="mb-4">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-white/30 block mb-2 px-1">Reactions</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-white/30 block mb-2 px-1">{t('chat.reactions', locale)}</span>
                 <div className="flex items-center justify-between bg-white/3 border border-white/5 rounded-xl p-2 overflow-x-auto gap-2 scrollbar-none">
                   {CHAT_EMOJIS.map((emoji) => {
                     const isReacted = ((activeMenuMessage.reactions?.[emoji] || []) as string[]).includes(user.id);
@@ -584,14 +605,14 @@ export default function LiveChatRoom() {
 
               {/* Actions */}
               <div className="space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-white/30 block mb-2 px-1">Actions</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-white/30 block mb-2 px-1">{t('chat.actions', locale)}</span>
 
                 <button onClick={() => { setReplyTo(activeMenuMessage); setActiveMenuMessage(null); }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
                   <Reply size={16} className="text-brand-400" /> Reply
                 </button>
 
-                <button onClick={() => { navigator.clipboard.writeText(activeMenuMessage.content); toast.success('Copied!'); setActiveMenuMessage(null); }}
+                <button onClick={() => { navigator.clipboard.writeText(activeMenuMessage.content); toast.success(t('chat.copied', locale)); setActiveMenuMessage(null); }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-all text-sm font-medium">
                   <Copy size={16} className="text-blue-400" /> Copy Text
                 </button>
@@ -667,7 +688,7 @@ export default function LiveChatRoom() {
 
               {/* Timestamp */}
               <div className="p-3 bg-white/3 rounded-xl mb-3">
-                <div className="text-[10px] uppercase tracking-wider font-semibold text-white/30 mb-1">Sent</div>
+                <div className="text-[10px] uppercase tracking-wider font-semibold text-white/30 mb-1">{t('chat.sent_label', locale)}</div>
                 <div className="text-xs text-white/70">
                   {new Date(infoMessage.created_at).toLocaleString([], {
                     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -683,14 +704,14 @@ export default function LiveChatRoom() {
                   Read by {(infoMessage.read_by || []).length} {(infoMessage.read_by || []).length === 1 ? 'person' : 'people'}
                 </div>
                 {(infoMessage.read_by || []).length === 0 && (
-                  <div className="text-xs text-white/30 italic">No read receipts yet</div>
+                  <div className="text-xs text-white/30 italic">{t('chat.no_receipts', locale)}</div>
                 )}
               </div>
 
               {/* Reactions Summary */}
               {infoMessage.reactions && Object.keys(infoMessage.reactions).length > 0 && (
                 <div className="p-3 bg-white/3 rounded-xl">
-                  <div className="text-[10px] uppercase tracking-wider font-semibold text-white/30 mb-2">Reactions</div>
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-white/30 mb-2">{t('chat.reactions', locale)}</div>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(infoMessage.reactions).map(([emoji, users]) => (
                       <div key={emoji} className="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg text-sm">
@@ -752,19 +773,23 @@ function ChatMessageItem({
   msg, currentUserId, activeEmoji, setActiveEmoji,
   setReplyTo, handleReaction, replyMsg, onOpenMenu, onImageTap,
 }: ChatMessageItemProps) {
+  const { locale } = useLanguageStore();
+  const rtl = locale === 'ar' || locale === 'ur';
   const isOwn = msg.sender_id === currentUserId;
   const x = useMotionValue(0);
-  const replyOpacity = useTransform(x, isOwn ? [0, -60] : [0, 60], [0, 1]);
-  const replyScale = useTransform(x, isOwn ? [0, -60] : [0, 60], [0.6, 1.1]);
+  const ownRange: number[] = rtl ? [0, 60] : [0, -60];
+  const otherRange: number[] = rtl ? [0, -60] : [0, 60];
+  const replyOpacity = useTransform(x, isOwn ? ownRange : otherRange, [0, 1]);
+  const replyScale = useTransform(x, isOwn ? ownRange : otherRange, [0.6, 1.1]);
 
   const readCount = (msg.read_by || []).length;
   const isRead = readCount > 0;
 
   const handleDragEnd = (_: any, info: any) => {
     if (isOwn) {
-      if (info.offset.x < -40) setReplyTo(msg);
+      if (rtl ? info.offset.x > 40 : info.offset.x < -40) setReplyTo(msg);
     } else {
-      if (info.offset.x > 40) setReplyTo(msg);
+      if (rtl ? info.offset.x < -40 : info.offset.x > 40) setReplyTo(msg);
     }
   };
 
@@ -772,10 +797,10 @@ function ChatMessageItem({
     <div className={`relative group/item flex items-end gap-1 ${isOwn ? 'justify-end' : 'justify-start'} mb-0.5`}>
 
       {/* Swipe reply indicator */}
-      <div className={`absolute ${isOwn ? 'right-2' : 'left-9'} top-1/2 -translate-y-1/2 pointer-events-none z-0`}>
+      <div className={`absolute ${isOwn ? (rtl ? 'left-2' : 'right-2') : (rtl ? 'right-9' : 'left-9')} top-1/2 -translate-y-1/2 pointer-events-none z-0`}>
         <motion.div
           style={{ opacity: replyOpacity, scale: replyScale }}
-          className="w-7 h-7 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center"
+          className="w-7 h-7 rounded-full bg-[#0084FF]/20 text-[#0084FF] border border-[#0084FF]/30 flex items-center justify-center"
         >
           <Reply size={14} />
         </motion.div>
@@ -785,10 +810,10 @@ function ChatMessageItem({
       {isOwn && (
         <div className="hidden md:flex items-center gap-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity order-first"
           onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-          <button onClick={() => setReplyTo(msg)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title="Reply">
+          <button onClick={() => setReplyTo(msg)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title={t('chat.reply', locale)}>
             <Reply size={12} />
           </button>
-          <button onClick={() => setActiveEmoji(activeEmoji === msg.id ? null : msg.id)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title="React">
+          <button onClick={() => setActiveEmoji(activeEmoji === msg.id ? null : msg.id)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title={t('chat.react', locale)}>
             <Smile size={12} />
           </button>
         </div>
@@ -810,8 +835,8 @@ function ChatMessageItem({
       <div className="relative max-w-[78%] md:max-w-[60%]">
         <motion.div
           drag="x"
-          dragConstraints={isOwn ? { left: -80, right: 0 } : { left: 0, right: 80 }}
-          dragElastic={isOwn ? { left: 0.5, right: 0.1 } : { left: 0.1, right: 0.5 }}
+          dragConstraints={isOwn ? (rtl ? { left: 0, right: 80 } : { left: -80, right: 0 }) : (rtl ? { left: -80, right: 0 } : { left: 0, right: 80 })}
+          dragElastic={isOwn ? (rtl ? { left: 0.1, right: 0.5 } : { left: 0.5, right: 0.1 }) : (rtl ? { left: 0.5, right: 0.1 } : { left: 0.1, right: 0.5 })}
           dragSnapToOrigin
           style={{ x }}
           onDragEnd={handleDragEnd}
@@ -821,8 +846,8 @@ function ChatMessageItem({
           transition={{ duration: 0.2 }}
           className={`relative z-10 px-3 py-1.5 cursor-pointer select-none
             ${isOwn
-              ? 'bg-gradient-to-br from-brand-500/90 to-accent-500/75 rounded-2xl rounded-br-[4px] text-white shadow-md shadow-brand-500/10'
-              : 'bg-white/[0.05] border border-white/[0.08] rounded-2xl rounded-bl-[4px] text-white/85'
+              ? `bg-[#0084FF] rounded-2xl ${rtl ? 'rounded-bl-[4px]' : 'rounded-br-[4px]'} text-white shadow-md shadow-[#0084FF]/10`
+              : `bg-[#3E4042] rounded-2xl ${rtl ? 'rounded-br-[4px]' : 'rounded-bl-[4px]'} text-white/90`
             }`}
         >
           {/* Sender name (others only) */}
@@ -835,7 +860,7 @@ function ChatMessageItem({
           {/* Reply reference */}
           {replyMsg && (
             <div
-              className={`flex items-center gap-1 text-[10px] mb-1 px-2 py-1 rounded-lg border-l-2 truncate
+              className={`flex items-center gap-1 text-[10px] mb-1 px-2 py-1 rounded-lg ${rtl ? 'border-r-2' : 'border-l-2'} truncate
                 ${isOwn ? 'bg-white/10 border-white/40 text-white/70' : 'bg-white/[0.04] border-brand-400/50 text-white/40'}`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -879,7 +904,7 @@ function ChatMessageItem({
                 <button key={emoji} onClick={() => handleReaction(msg.id, emoji)}
                   className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] transition-all
                     ${(users as string[]).includes(currentUserId)
-                      ? 'bg-brand-500/25 border border-brand-500/40'
+                      ? 'bg-[#0084FF]/25 border border-[#0084FF]/40'
                       : isOwn ? 'bg-black/15 border border-white/15' : 'bg-white/5 border border-white/8'
                     }`}>
                   {emoji} {(users as string[]).length}
@@ -914,10 +939,10 @@ function ChatMessageItem({
       {!isOwn && (
         <div className="hidden md:flex items-center gap-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-          <button onClick={() => setReplyTo(msg)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title="Reply">
+          <button onClick={() => setReplyTo(msg)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title={t('chat.reply', locale)}>
             <Reply size={12} />
           </button>
-          <button onClick={() => setActiveEmoji(activeEmoji === msg.id ? null : msg.id)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title="React">
+          <button onClick={() => setActiveEmoji(activeEmoji === msg.id ? null : msg.id)} className="p-1 rounded-md hover:bg-white/10 text-white/15 hover:text-white/60 transition-colors" title={t('chat.react', locale)}>
             <Smile size={12} />
           </button>
         </div>

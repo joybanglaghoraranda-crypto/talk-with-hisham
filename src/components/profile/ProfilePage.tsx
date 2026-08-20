@@ -8,6 +8,8 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { SOCIAL_LINKS } from '@/lib/constants';
 import { formatRelativeTime, sanitizeUrl } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import Link from 'next/link';
 import type { Profile } from '@/lib/types';
 
@@ -20,6 +22,7 @@ const HISHAM_PROFILE: Profile = {
 };
 
 export default function ProfilePage({ userId }: { userId?: string }) {
+  const { locale } = useLanguageStore();
   const { user } = useAuthStore();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
@@ -96,7 +99,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
     );
   }
 
-  if (!profile) return <div className="text-center p-12 text-white/30">Profile not found.</div>;
+  if (!profile) return <div className="text-center p-12 text-white/30">{t('profile.not_found', locale)}</div>;
 
   const isHisham = profile.username === 'hisham' || profile.id === 'hisham';
   const profileAvatarUrl = profile.avatar_url ? sanitizeUrl(profile.avatar_url) : '';
@@ -144,7 +147,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">{profile.full_name || profile.username}</h1>
                   {isHisham && (
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center" title="Verified">
+                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center" title={t('misc.verified', locale)}>
                       <Sparkles size={10} className="text-white" />
                     </div>
                   )}
@@ -222,7 +225,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
             {posts.length === 0 ? (
               <div className="glass-card py-12 text-center">
                 <MessageCircle className="mx-auto text-white/10 mb-3" size={36} />
-                <p className="text-white/20 text-sm">No posts yet.</p>
+                <p className="text-white/20 text-sm">{t('profile.no_posts', locale)}</p>
               </div>
             ) : (
               posts.map((post) => (
@@ -247,7 +250,7 @@ export default function ProfilePage({ userId }: { userId?: string }) {
         {activeTab === 'conversations' && (
           <div className="glass-card py-12 text-center">
             <MessageCircle className="mx-auto text-white/10 mb-3" size={36} />
-            <p className="text-white/20 text-sm">No conversations to show yet.</p>
+            <p className="text-white/20 text-sm">{t('profile.no_chats', locale)}</p>
           </div>
         )}
       </div>

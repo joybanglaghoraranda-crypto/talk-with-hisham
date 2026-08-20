@@ -4,50 +4,60 @@ import Providers from './providers';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import MobileTabBar from '@/components/layout/MobileTabBar';
+import ReadingProgress from '@/components/layout/ReadingProgress';
+import BackToTop from '@/components/layout/BackToTop';
+import PwaRegister from '@/components/layout/PwaRegister';
+import PageTransition from '@/components/layout/PageTransition';
+import LanguageInit from '@/components/layout/LanguageInit';
+import ParticleBackground from '@/components/layout/ParticleBackground';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/react';
 import { Sora, Inter, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-// Configure Google Fonts for self-hosting & optimal performance
-const sora = Sora({
-  subsets: ['latin'],
+// Self-hosted variable fonts (no build-time fetch from Google)
+const sora = localFont({
+  src: './fonts/sora-latin.woff2',
   variable: '--font-heading',
   display: 'swap',
+  weight: '100 800',
 });
 
-const inter = Inter({
-  subsets: ['latin'],
+const inter = localFont({
+  src: './fonts/inter-latin.woff2',
   variable: '--font-sans',
   display: 'swap',
+  weight: '100 900',
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
+const jetbrainsMono = localFont({
+  src: './fonts/jetbrains-mono-latin.woff2',
   variable: '--font-mono',
   display: 'swap',
+  weight: '100 800',
 });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Talk with Hisham — Conversations, Opinions & Connection',
-    template: '%s | Talk with Hisham',
+    default: 'Muhibbullah Hisham — Educator, Researcher & Mentor',
+    template: '%s | Muhibbullah Hisham',
   },
   description:
-    'A personal portfolio and social platform by Muhibbullah Hisham — for real-time debates, communication, and intellectual discourse.',
+    'Official site of Muhibbullah Hisham — educator, researcher, and mentor bridging classical Islamic scholarship with modern education, curriculum development, and youth mentoring.',
   metadataBase: new URL('https://twhisham.vercel.app'),
   openGraph: {
-    title: 'Talk with Hisham',
+    title: 'Muhibbullah Hisham — Educator, Researcher & Mentor',
     description:
-      'Join the conversation. A space for deep conversations, real-time opinions, and cross-platform connection.',
+      'Educator and researcher bridging classical Islamic scholarship with modern education. Teaching, research, curriculum development, and youth mentoring.',
     type: 'website',
-    siteName: 'Talk with Hisham',
+    siteName: 'Muhibbullah Hisham',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Talk with Hisham',
+    title: 'Muhibbullah Hisham — Educator, Researcher & Mentor',
     description:
-      'Join the conversation. A space for deep conversations, real-time opinions, and cross-platform connection.',
+      'Educator and researcher bridging classical Islamic scholarship with modern education. Teaching, research, curriculum development, and youth mentoring.',
   },
   icons: {
     icon: [
@@ -55,7 +65,7 @@ export const metadata: Metadata = {
       { url: '/icon.png', type: 'image/png', sizes: '512x512' },
     ],
     shortcut: '/favicon.ico',
-    apple: '/icon.png',
+    apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.json',
   verification: {
@@ -125,7 +135,7 @@ export const metadata: Metadata = {
   other: {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
-    'apple-mobile-web-app-title': 'Talk with Hisham',
+    'apple-mobile-web-app-title': 'Muhibbullah Hisham',
   },
 };
 
@@ -211,12 +221,17 @@ export default function RootLayout({
       </head>
       <body className="relative min-h-screen bg-surface-0 text-white overflow-x-hidden font-sans">
         <Providers>
+          <LanguageInit />
+          <ParticleBackground />
+          <ReadingProgress />
           <Navbar />
           <main className="relative z-10 pt-20 pb-20 md:pb-0 min-h-[85vh]">
-            {children}
+            <PageTransition>{children}</PageTransition>
           </main>
           <Footer />
           <MobileTabBar />
+          <BackToTop />
+          <PwaRegister />
           <Toaster
             richColors
             position="top-right"

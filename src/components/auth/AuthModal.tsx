@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth-store';
 import { X, LogIn, UserPlus, Loader2, Mail, Lock, User, Sparkles, Eye, EyeOff, ShieldCheck, Github } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 
@@ -14,6 +16,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+  const { locale } = useLanguageStore();
   const { signIn, signUp, signInWithOAuth, signInWithMagicLink } = useAuthStore();
   const [mode, setMode] = useState<'login' | 'signup' | 'magic' | 'forgot'>('login');
   const [email, setEmail] = useState('');
@@ -41,11 +44,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       try {
         const { error } = await signInWithMagicLink(email);
         if (error) throw error;
-        toast.success('Magic link sent! Check your email.');
+        toast.success(t('auth.magic_sent', locale));
         resetForm();
         onClose();
       } catch (err: any) {
-        toast.error(err.message || 'Failed to send magic link');
+        toast.error(err.message || t('auth.failed_magic', locale));
       } finally {
         setLoading(false);
       }
@@ -60,7 +63,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
-        toast.success('Password reset link sent! Check your email.');
+        toast.success(t('auth.reset_sent', locale));
         resetForm();
         onClose();
       } catch (err: any) {
@@ -74,11 +77,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     if (!email.trim() || !password.trim()) return;
 
     if (mode === 'signup') {
-      if (!firstName.trim()) { toast.error('First name is required'); return; }
-      if (!username.trim()) { toast.error('Please choose a username'); return; }
-      if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
-      if (password !== confirmPassword) { toast.error('Passwords do not match'); return; }
-      if (!agreed) { toast.error('Please accept the terms'); return; }
+      if (!firstName.trim()) { toast.error(t('auth.err_firstname', locale)); return; }
+      if (!username.trim()) { toast.error(t('auth.err_username', locale)); return; }
+      if (password.length < 6) { toast.error(t('auth.err_pw_short', locale)); return; }
+      if (password !== confirmPassword) { toast.error(t('auth.err_pw_match', locale)); return; }
+      if (!agreed) { toast.error(t('auth.err_agree', locale)); return; }
     }
 
     setLoading(true);
@@ -86,12 +89,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       if (mode === 'login') {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        toast.success('Welcome back!');
+        toast.success(t('auth.welcome_toast', locale));
       } else {
         const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
         const { error } = await signUp(email, password, username.trim().toLowerCase(), fullName);
         if (error) throw error;
-        toast.success('Account created! Please check your email to confirm registration and activate your account. 🎉');
+        toast.success(t('auth.account_created', locale));;
       }
       resetForm();
       onClose();
@@ -139,7 +142,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               <div className="p-6 space-y-5">
                 <button
                   onClick={onClose}
-                  aria-label="Close modal"
+                  aria-label={t('auth.close_modal', locale)}
                   className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
                 >
                   <X size={16} />
@@ -157,13 +160,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </div>
                   <div>
                     <h2 className="text-xl font-heading font-bold text-white">
-                      {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : mode === 'magic' ? 'Magic Link' : 'Reset Password'}
+                      {mode === 'login' ? t('auth.welcome_back', locale) : mode === 'signup' ? t('auth.create_account', locale) : mode === 'magic' ? t('auth.magic_title', locale) : t('auth.reset_password', locale)}
                     </h2>
                     <p className="text-white/40 text-sm mt-1">
-                      {mode === 'login' ? 'Sign in to continue the discourse'
-                        : mode === 'signup' ? 'Fill in your details to get started'
-                        : mode === 'magic' ? "We'll email you a login link"
-                        : 'Enter your email to receive a password reset link'}
+                      {mode === 'login' ? t('auth.signin_subtitle', locale)
+                        : mode === 'signup' ? t('auth.signup_subtitle', locale)
+                        : mode === 'magic' ? t('auth.magic_subtitle', locale)
+                        : t('auth.reset_subtitle', locale)}
                     </p>
                   </div>
                 </div>
@@ -191,7 +194,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 {mode !== 'magic' && mode !== 'forgot' && (
                   <div className="flex items-center gap-4">
                     <div className="flex-1 h-px bg-white/8" />
-                    <span className="text-white/20 text-[10px] uppercase tracking-widest">or</span>
+                    <span className="text-white/20 text-[10px] uppercase tracking-widest">{t('auth.or', locale)}</span>
                     <div className="flex-1 h-px bg-white/8" />
                   </div>
                 )}
@@ -202,19 +205,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">First Name *</label>
+                          <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">{t('auth.first_name', locale)} *</label>
                           <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Muhibbullah"
                             className="w-full bg-white/5 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 outline-none transition-all" required />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">Last Name</label>
+                          <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">{t('auth.last_name', locale)}</label>
                           <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Hisham"
                             className="w-full bg-white/5 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 outline-none transition-all" />
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                          <User size={10} /> Username *
+                          <User size={10} /> {t('auth.username', locale)} *
                         </label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-400 font-medium text-sm">@</span>
@@ -227,7 +230,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                      <Mail size={10} /> Email Address *
+                      <Mail size={10} /> {t('auth.email_address', locale)} *
                     </label>
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com"
                       className="w-full bg-white/5 border border-white/8 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 outline-none transition-all" required />
@@ -237,7 +240,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
                         <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                          <Lock size={10} /> Password *
+                          <Lock size={10} /> {t('auth.password_label', locale)} *
                         </label>
                         {mode === 'login' && (
                           <button
@@ -245,14 +248,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                             onClick={() => { setMode('forgot'); resetForm(); }}
                             className="text-[10px] text-brand-400 hover:text-brand-300 transition-colors"
                           >
-                            Forgot Password?
+                            {t('auth.forgot_pw', locale)}
                           </button>
                         )}
                       </div>
                       <div className="relative">
-                        <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" minLength={6}
+                        <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.pw_hint", locale)} minLength={6}
                           className="w-full bg-white/5 border border-white/8 rounded-lg px-3 py-2.5 pr-10 text-sm text-white placeholder:text-white/20 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 outline-none transition-all" required />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? t('auth.hide_pw', locale) : t('auth.show_pw', locale)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
                           {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
@@ -264,17 +267,17 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     <>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                          <ShieldCheck size={10} /> Confirm Password *
+                          <ShieldCheck size={10} /> {t('auth.confirm_label', locale)} *
                         </label>
-                        <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter password" minLength={6}
+                        <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={t("auth.reenter_pw", locale)} minLength={6}
                           className={`w-full bg-white/5 border rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 outline-none transition-all ${confirmPassword && password !== confirmPassword ? 'border-accent-500/50' : 'border-white/8'}`} required />
-                        {confirmPassword && password !== confirmPassword && <p className="text-accent-400 text-[10px]">Passwords do not match</p>}
+                        {confirmPassword && password !== confirmPassword && <p className="text-accent-400 text-[10px]">{t('auth.err_pw_match', locale)}</p>}
                       </div>
                       <label className="flex items-start gap-2.5 cursor-pointer group pt-1">
                         <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
                           className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 text-brand-500 focus:ring-brand-500 focus:ring-offset-0" />
                         <span className="text-[11px] text-white/40 leading-relaxed group-hover:text-white/60 transition-colors">
-                          I agree to the <span className="text-brand-400">Terms of Service</span> and <span className="text-brand-400">Privacy Policy</span>
+                          {t("auth.agree_terms", locale)}
                         </span>
                       </label>
                     </>
@@ -289,7 +292,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       : mode === 'login' ? <LogIn size={16} />
                       : mode === 'signup' ? <UserPlus size={16} />
                       : <Mail size={16} />}
-                    {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : mode === 'magic' ? 'Send Magic Link' : 'Send Reset Link'}
+                    {mode === 'login' ? t('auth.sign_in', locale) : mode === 'signup' ? t('auth.create_account', locale) : mode === 'magic' ? t('auth.send_magic', locale) : t('auth.send_reset', locale)}
                   </button>
                 </form>
 
@@ -306,16 +309,16 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     }}
                     className="w-full py-2.5 rounded-xl border border-white/8 bg-white/3 text-white/60 hover:text-white hover:bg-white/5 transition-all text-sm font-medium"
                   >
-                    {mode === 'login' ? "Don't have an account? Create one"
-                      : mode === 'signup' ? 'Already have an account? Sign in'
-                      : 'Back to Sign In'}
+                    {mode === 'login' ? t('auth.no_account', locale)
+                      : mode === 'signup' ? t('auth.have_account', locale)
+                      : t('auth.back_signin', locale)}
                   </button>
                   {mode !== 'magic' && mode !== 'forgot' && (
                     <button
                       onClick={() => { setMode('magic'); resetForm(); }}
                       className="text-[11px] text-white/30 hover:text-brand-400 transition-colors"
                     >
-                      Sign in with magic link instead
+                      {t('auth.magic_alt', locale)}
                     </button>
                   )}
                 </div>

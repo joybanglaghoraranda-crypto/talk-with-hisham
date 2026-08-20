@@ -1,19 +1,40 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { GraduationCap, BookOpen, Target, Heart, Users, Lightbulb, Award, Globe } from 'lucide-react';
-
-const ROLES = ['Instructor', 'Educator', 'Mentor', 'Assistant Researcher', 'AI Enthusiast', 'Curious Thinker', 'Guidance Counselor', 'Curriculum Developer'];
-const PASSIONS = ['Languages', 'Entrepreneurship', 'Charity', 'Social Development', 'Youth Mentoring', 'Community Engagement'];
-
-const TIMELINE = [
-  { year: 'Early Years', title: 'Memorization of the Qur\'an', desc: 'Completed alongside primary-level education in the Alia madrasa system.', icon: BookOpen },
-  { year: 'Qawmi Studies', title: 'Dawra-e-Hadith (Master\'s Equivalent)', desc: 'Continued studies within the Qawmi madrasa tradition, completing from Dhaka.', icon: GraduationCap },
-  { year: 'Specialization', title: 'PGD in Islamic Dawah', desc: 'Advanced specialization at As-Sunnah Dawah & Research Institute.', icon: Award },
-  { year: 'Present', title: 'SSC Candidate (2027)', desc: 'Continuing academic journey within general education. Interested in Education Research & African Studies.', icon: Target },
-];
+import { GraduationCap, BookOpen, Target, Heart, Users, Lightbulb, Award, Globe, BadgeCheck } from 'lucide-react';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
+import FeaturesSection from '@/components/home/FeaturesSection';
+import StatsCounter from '@/components/home/StatsCounter';
+import CTASection from '@/components/home/CTASection';
 
 export default function AboutPage() {
+  const { locale } = useLanguageStore();
+
+  const ROLES = [
+    t('role.instructor', locale), t('role.educator', locale), t('role.mentor', locale),
+    t('role.researcher', locale), t('role.ai', locale), t('role.thinker', locale),
+    t('role.counselor', locale), t('role.curriculum', locale),
+  ];
+  const PASSIONS = [
+    t('passion.languages', locale), t('passion.entrepreneurship', locale), t('passion.charity', locale),
+    t('passion.social', locale), t('passion.youth', locale), t('passion.community', locale),
+  ];
+
+  const TIMELINE = [
+    { year: t('tl.early_year', locale), title: t('tl.early_title', locale), desc: t('tl.early_desc', locale), icon: BookOpen },
+    { year: t('tl.qawmi_year', locale), title: t('tl.qawmi_title', locale), desc: t('tl.qawmi_desc', locale), icon: GraduationCap },
+    { year: t('tl.spec_year', locale), title: t('tl.spec_title', locale), desc: t('tl.spec_desc', locale), icon: Award },
+    { year: t('tl.present_year', locale), title: t('tl.present_title', locale), desc: t('tl.present_desc', locale), icon: Target },
+  ];
+
+  const CREDENTIALS = [
+    { icon: BookOpen, label: t('cred.quran', locale) },
+    { icon: GraduationCap, label: t('cred.dawra', locale) },
+    { icon: Award, label: t('cred.pgd', locale) },
+    { icon: BadgeCheck, label: t('cred.educator', locale) },
+  ];
+
   return (
     <div className="relative z-10 px-4 md:px-8 max-w-5xl mx-auto pb-12 mesh-bg min-h-screen">
       {/* Hero */}
@@ -22,14 +43,11 @@ export default function AboutPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center py-12"
       >
-        <p className="text-brand-400 font-mono tracking-widest uppercase text-xs mb-3">About the Mind Behind</p>
+        <p className="text-brand-400 font-mono tracking-widest uppercase text-xs mb-3">{t('about.hero_label', locale)}</p>
         <h1 className="text-4xl md:text-6xl font-heading font-bold tracking-tight mb-4">
           <span className="gradient-text">Muhibbullah Hisham</span>
         </h1>
-        <p className="text-white/40 max-w-2xl mx-auto text-sm leading-relaxed">
-          Educator, researcher, and lifelong learner. Integrating classical Islamic scholarship
-          with modern thought for meaningful impact.
-        </p>
+        <p className="text-white/40 max-w-2xl mx-auto text-sm leading-relaxed">{t('about.hero_desc', locale)}</p>
       </motion.div>
 
       {/* Intro Card */}
@@ -44,20 +62,14 @@ export default function AboutPage() {
             <Lightbulb size={20} className="text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-heading font-bold text-white mb-1">Who I Am</h2>
-            <p className="text-white/35 text-xs uppercase tracking-widest">Born 2005 · Mymensingh · Raised in Jamalpur & Dhaka</p>
+            <h2 className="text-lg font-heading font-bold text-white mb-1">{t('about.who_i_am', locale)}</h2>
+            <p className="text-white/35 text-xs uppercase tracking-widest">{t('about.born', locale)}</p>
           </div>
         </div>
         <div className="space-y-4 text-white/60 leading-relaxed text-[15px]">
-          <p>
-            I am <span className="text-white font-semibold">Muhibbullah Hisham</span>, an educator, researcher, and lifelong learner with a strong foundation in Islamic studies and an evolving engagement with contemporary education and intellectual inquiry.
-          </p>
-          <p>
-            Professionally and intellectually, I engage in teaching, training, and academic research. My approach seeks to integrate classical Islamic scholarship with modern thought, especially in curriculum development, intellectual guidance, and youth development.
-          </p>
-          <p>
-            Beyond formal academia, I value human connection and social responsibility — interacting with people, exploring nature, and contributing to charitable and community-based initiatives.
-          </p>
+          <p dangerouslySetInnerHTML={{ __html: t('about.bio_p1', locale) }} />
+          <p>{t('about.bio_p2', locale)}</p>
+          <p>{t('about.bio_p3', locale)}</p>
         </div>
       </motion.div>
 
@@ -70,7 +82,7 @@ export default function AboutPage() {
       >
         <h2 className="text-xl font-heading font-bold text-white mb-6 flex items-center gap-2">
           <GraduationCap size={20} className="text-brand-400" />
-          Academic Journey
+          {t('about.academic', locale)}
         </h2>
         <div className="relative">
           <div className="absolute left-[22px] top-0 bottom-0 w-px bg-gradient-to-b from-brand-500/30 via-white/8 to-transparent" />
@@ -100,59 +112,48 @@ export default function AboutPage() {
 
       {/* Roles & Passions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="glass-card p-6"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card p-6">
           <h3 className="text-sm font-heading font-bold text-brand-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Users size={14} /> Core Roles & Interests
+            <Users size={14} /> {t('about.roles', locale)}
           </h3>
           <div className="flex flex-wrap gap-2">
             {ROLES.map((role) => (
-              <span key={role} className="px-3 py-1.5 bg-white/3 border border-white/8 rounded-lg text-xs text-white/50 hover:text-white hover:bg-white/5 hover:border-brand-500/20 transition-all cursor-default">
-                {role}
-              </span>
+              <span key={role} className="px-3 py-1.5 bg-white/3 border border-white/8 rounded-lg text-xs text-white/50 hover:text-white hover:bg-white/5 hover:border-brand-500/20 transition-all cursor-default">{role}</span>
             ))}
           </div>
         </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-6"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="glass-card p-6">
           <h3 className="text-sm font-heading font-bold text-accent-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Heart size={14} /> Areas of Passion
+            <Heart size={14} /> {t('about.passions', locale)}
           </h3>
           <div className="flex flex-wrap gap-2">
             {PASSIONS.map((passion) => (
-              <span key={passion} className="px-3 py-1.5 bg-white/3 border border-white/8 rounded-lg text-xs text-accent-400/50 hover:text-accent-400 hover:bg-accent-500/5 hover:border-accent-500/20 transition-all cursor-default">
-                {passion}
-              </span>
+              <span key={passion} className="px-3 py-1.5 bg-white/3 border border-white/8 rounded-lg text-xs text-accent-400/50 hover:text-accent-400 hover:bg-accent-500/5 hover:border-accent-500/20 transition-all cursor-default">{passion}</span>
             ))}
           </div>
         </motion.div>
       </div>
 
       {/* Mission */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="glass-card p-6 md:p-8 text-center"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card p-6 md:p-8 text-center">
         <Globe size={28} className="mx-auto text-brand-400 mb-4" />
-        <h2 className="text-lg font-heading font-bold text-white mb-3">Mission</h2>
-        <p className="text-white/45 text-sm leading-relaxed max-w-2xl mx-auto">
-          To bridge the gap between classical Islamic scholarship and modern intellectual discourse,
-          empowering youth through mentoring, curriculum development, and community engagement —
-          creating spaces for meaningful conversations that transcend borders.
-        </p>
+        <h2 className="text-lg font-heading font-bold text-white mb-3">{t('about.mission', locale)}</h2>
+        <p className="text-white/45 text-sm leading-relaxed max-w-2xl mx-auto">{t('about.mission_text', locale)}</p>
       </motion.div>
+
+      {/* Credentials */}
+      <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {CREDENTIALS.map((cred) => (
+          <div key={cred.label} className="flex items-center gap-3 glass-card px-4 py-3">
+            <cred.icon size={16} className="text-brand-400 flex-shrink-0" />
+            <span className="text-xs text-white/50 leading-snug">{cred.label}</span>
+          </div>
+        ))}
+      </motion.div>
+
+      <StatsCounter />
+      <FeaturesSection />
+      <CTASection />
     </div>
   );
 }

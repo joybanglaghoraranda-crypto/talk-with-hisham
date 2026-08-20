@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Loader2, KeyRound, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function ResetPasswordPage() {
+  const { locale } = useLanguageStore();
   const { user } = useAuthStore();
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -28,28 +31,28 @@ export default function ResetPasswordPage() {
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast.error('You must be signed in to reset your password.');
+      toast.error(t('reset.signed_in', locale));
       return;
     }
     if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      toast.error(t('reset.pw_short', locale));
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('reset.pw_mismatch', locale));
       return;
     }
     setUpdatingPassword(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success('Password updated successfully!');
+      toast.success(t('settings.pw_updated', locale));
       setNewPassword('');
       setConfirmNewPassword('');
       // Redirect to profile
       router.push('/profile');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update password');
+      toast.error(err.message || t('settings.pw_failed', locale));
     } finally {
       setUpdatingPassword(false);
     }
@@ -59,7 +62,7 @@ export default function ResetPasswordPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh]">
         <Loader2 className="animate-spin text-brand-400" size={32} />
-        <p className="text-white/40 text-sm mt-3">Verifying session...</p>
+        <p className="text-white/40 text-sm mt-3">{t('reset.verifying', locale)}</p>
       </div>
     );
   }
@@ -71,15 +74,15 @@ export default function ResetPasswordPage() {
           <div className="w-12 h-12 rounded-xl bg-accent-500/10 flex items-center justify-center mx-auto text-accent-400">
             <KeyRound size={24} />
           </div>
-          <h1 className="text-xl font-heading font-bold text-white">Invalid or Expired Link</h1>
+          <h1 className="text-xl font-heading font-bold text-white">{t('reset.invalid', locale)}</h1>
           <p className="text-white/40 text-sm leading-relaxed">
-            You must be logged in to reset your password. If you requested a reset email, please ensure you clicked the link correctly.
+            {t('reset.invalid_desc', locale)}
           </p>
           <button
             onClick={() => router.push('/')}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/8 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
           >
-            Go to Home
+            {t('reset.go_home', locale)}
           </button>
         </div>
       </div>
@@ -102,21 +105,21 @@ export default function ResetPasswordPage() {
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-400 to-accent-500 flex items-center justify-center mx-auto font-bold text-white text-lg shadow-lg shadow-brand-500/30">
               <Lock size={20} />
             </div>
-            <h1 className="text-xl font-heading font-bold text-white mt-3">Reset Password</h1>
-            <p className="text-white/45 text-sm">Please set your new password below.</p>
+            <h1 className="text-xl font-heading font-bold text-white mt-3">{t('reset.title', locale)}</h1>
+            <p className="text-white/45 text-sm">{t('reset.subtitle', locale)}</p>
           </div>
 
           <form onSubmit={handleUpdatePassword} className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="newPassword" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                <Lock size={10} /> New Password
+                <Lock size={10} /> {t('settings.new_password', locale)}
               </label>
               <input
                 id="newPassword"
                 type="password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                placeholder="Min 6 characters"
+                placeholder={t("settings.pw_min_ph", locale)}
                 className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none"
                 minLength={6}
                 required
@@ -125,14 +128,14 @@ export default function ResetPasswordPage() {
 
             <div className="space-y-1.5">
               <label htmlFor="confirmNewPassword" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                <Lock size={10} /> Confirm New Password
+                <Lock size={10} /> {t('settings.confirm_password', locale)}
               </label>
               <input
                 id="confirmNewPassword"
                 type="password"
                 value={confirmNewPassword}
                 onChange={e => setConfirmNewPassword(e.target.value)}
-                placeholder="Confirm your new password"
+                placeholder={t("reset.confirm_ph", locale)}
                 className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none"
                 minLength={6}
                 required
@@ -148,7 +151,7 @@ export default function ResetPasswordPage() {
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <span className="flex items-center gap-1.5 text-white">
-                  Update Password <ArrowRight size={16} />
+                  {t('settings.update_password', locale)} <ArrowRight size={16} />
                 </span>
               )}
             </button>

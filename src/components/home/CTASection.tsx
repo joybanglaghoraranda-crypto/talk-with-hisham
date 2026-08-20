@@ -2,11 +2,15 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, MessageSquare, Sparkles } from 'lucide-react';
+import { ArrowRight, MessageSquare, Mail } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import AuthModal from '@/components/auth/AuthModal';
+import { SITE_CONFIG } from '@/lib/constants';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 
 export default function CTASection() {
+  const { locale } = useLanguageStore();
   const { user } = useAuthStore();
   const [authOpen, setAuthOpen] = useState(false);
 
@@ -40,15 +44,15 @@ export default function CTASection() {
               transition={{ delay: 0.2, type: 'spring' }}
               className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-brand-500/30"
             >
-              <Sparkles size={24} className="text-white" />
+              <Mail size={24} className="text-white" />
             </motion.div>
 
             <h2 className="text-3xl md:text-5xl font-heading font-bold text-white tracking-tight mb-4 relative z-10">
-              Ready to join the <br className="hidden md:block" />
-              <span className="gradient-text">conversation?</span>
+              {t('cta.conversation', locale)} <br className="hidden md:block" />
+              <span className="gradient-text">{t('cta.conversation_word', locale)}</span>
             </h2>
             <p className="text-white/35 max-w-lg mx-auto text-sm md:text-base leading-relaxed mb-8 relative z-10">
-              Be part of a community that values intellectual discourse, personal growth, and meaningful connections.
+              {t('cta.desc', locale)}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
@@ -57,15 +61,16 @@ export default function CTASection() {
                 className="group flex items-center gap-3 bg-gradient-to-r from-brand-500 to-accent-500 hover:from-brand-600 hover:to-accent-600 text-white font-bold py-3.5 px-8 rounded-xl shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 transition-all hover:scale-105 active:scale-95"
               >
                 <MessageSquare size={18} />
-                Start Chatting
+                {t('cta.join', locale)}
                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <button
-                onClick={() => handleAction('/feed')}
+              <a
+                href={`mailto:${SITE_CONFIG.email}`}
                 className="flex items-center gap-2 bg-white/5 hover:bg-white/8 border border-white/8 text-white font-medium py-3.5 px-8 rounded-xl transition-all hover:scale-105"
               >
-                Explore the Feed
-              </button>
+                <Mail size={16} />
+                {t('cta.email', locale)}
+              </a>
             </div>
           </div>
         </motion.div>

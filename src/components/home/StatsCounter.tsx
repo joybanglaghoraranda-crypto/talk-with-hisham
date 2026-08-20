@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Users, MessageSquare, Rss } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 
 interface StatItem {
   label: string;
@@ -70,11 +72,12 @@ function AnimatedCounter({ target, suffix = '' }: { target: number | null; suffi
 }
 
 export default function StatsCounter() {
+  const { locale } = useLanguageStore();
   const cached = getCachedStats();
   const [stats, setStats] = useState<StatItem[]>([
-    { label: 'Active Users', value: cached?.values[0] ?? null, suffix: '+', icon: Users, color: 'from-brand-500 to-brand-300' },
-    { label: 'Messages Sent', value: cached?.values[1] ?? null, suffix: '+', icon: MessageSquare, color: 'from-accent-500 to-accent-400' },
-    { label: 'Feed Posts', value: cached?.values[2] ?? null, suffix: '', icon: Rss, color: 'from-violet-500 to-purple-400' },
+    { label: t('stats.active_users', locale), value: cached?.values[0] ?? null, suffix: '+', icon: Users, color: 'from-brand-500 to-brand-300' },
+    { label: t('stats.messages', locale), value: cached?.values[1] ?? null, suffix: '+', icon: MessageSquare, color: 'from-accent-500 to-accent-400' },
+    { label: t('stats.feed_posts', locale), value: cached?.values[2] ?? null, suffix: '', icon: Rss, color: 'from-violet-500 to-purple-400' },
   ]);
   const [fetched, setFetched] = useState(!!cached);
 

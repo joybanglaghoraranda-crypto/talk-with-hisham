@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Loader2, Camera, User, Mail, FileText, AtSign, Trash2, Lock, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { uploadFile } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function ProfileSettings() {
+  const { locale } = useLanguageStore();
   const { user, signOut } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,56 +57,56 @@ export default function ProfileSettings() {
         updated_at: new Date().toISOString()
       }).eq('id', user.id);
       if (error) throw error;
-      toast.success('Profile updated!');
-    } catch (err: any) { toast.error(err.message || 'Failed to save'); } finally { setSaving(false); }
+      toast.success(t('settings.saved', locale));
+    } catch (err: any) { toast.error(err.message || t('settings.save_failed', locale)); } finally { setSaving(false); }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error('Max 2MB'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(t('settings.max2mb', locale)); return; }
     try {
       const url = await uploadFile(supabase as any, 'media', `avatars/${user.id}_${Date.now()}`, file);
       setAvatarUrl(url);
-      toast.success('Avatar uploaded');
+      toast.success(t('settings.avatar_uploaded', locale));
     } catch (err: any) {
       console.error('Avatar upload error:', err);
-      toast.error('Upload failed');
+      toast.error(t('settings.upload_fail', locale));
     }
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t('settings.max5mb', locale)); return; }
     try {
       const url = await uploadFile(supabase as any, 'media', `covers/${user.id}_${Date.now()}`, file);
       setCoverUrl(url);
-      toast.success('Cover uploaded');
+      toast.success(t('settings.cover_up', locale));
     } catch (err: any) {
       console.error('Cover upload error:', err);
-      toast.error('Upload failed');
+      toast.error(t('settings.upload_fail', locale));
     }
   };
 
   const handleUpdatePassword = async () => {
     if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      toast.error(t('reset.pw_short', locale));
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('reset.pw_mismatch', locale));
       return;
     }
     setUpdatingPassword(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast.success('Password updated successfully!');
+      toast.success(t('settings.pw_updated', locale));
       setNewPassword('');
       setConfirmNewPassword('');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update password');
+      toast.error(err.message || t('settings.pw_failed', locale));
     } finally {
       setUpdatingPassword(false);
     }
@@ -115,8 +118,8 @@ export default function ProfileSettings() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-white tracking-tight">Settings</h1>
-        <p className="text-white/30 text-sm">Manage your profile and account settings.</p>
+        <h1 className="text-2xl font-heading font-bold text-white tracking-tight">{t('settings.title', locale)}</h1>
+        <p className="text-white/30 text-sm">{t('settings.subtitle', locale)}</p>
       </div>
 
 
@@ -145,7 +148,7 @@ export default function ProfileSettings() {
                 type="button"
                 onClick={() => setAvatarUrl('')}
                 className="absolute -top-1 -right-1 bg-accent-600 hover:bg-accent-700 text-white p-1.5 rounded-full border border-white/10 transition-all hover:scale-110 shadow-md z-20"
-                title="Remove avatar"
+                title={t('settings.remove_avatar', locale)}
               >
                 <Trash2 size={12} />
               </button>
@@ -162,10 +165,10 @@ export default function ProfileSettings() {
                   onClick={() => setAvatarUrl('')}
                   className="flex items-center gap-1 text-[11px] font-medium text-accent-400 hover:text-accent-300 transition-colors"
                 >
-                  <Trash2 size={12} /> Remove Avatar
+                  <Trash2 size={12} /> {t('settings.remove_avatar', locale)}
                 </button>
               ) : (
-                <span className="text-[10px] text-white/30">No profile picture</span>
+                <span className="text-[10px] text-white/30">{t('settings.no_pic', locale)}</span>
               )}
               {(() => {
                 const googleAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
@@ -175,11 +178,11 @@ export default function ProfileSettings() {
                       type="button"
                       onClick={() => {
                         setAvatarUrl(googleAvatar);
-                        toast.success('Google profile picture imported! Save Changes to persist.');
+                        toast.success(t('settings.google_imported', locale));
                       }}
                       className="flex items-center gap-1 text-[11px] font-medium text-brand-400 hover:text-brand-300 transition-colors border border-brand-500/30 rounded-lg px-2 py-0.5 bg-brand-500/5 hover:bg-brand-500/10"
                     >
-                      <Sparkles size={11} /> Use Google Photo
+                      <Sparkles size={11} /> {t('settings.use_google', locale)}
                     </button>
                   );
                 }
@@ -192,14 +195,14 @@ export default function ProfileSettings() {
         {/* Cover Photo Card */}
         <div className="glass-card p-6 space-y-3">
           <label className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-            <Camera size={10} /> Cover Photo
+            <Camera size={10} /> {t('settings.cover_photo', locale)}
           </label>
           <div className="relative h-32 w-full rounded-xl bg-surface-300 overflow-hidden border border-white/8 group/cover shadow-inner">
             {coverUrl ? (
               <img src={coverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-brand-600/20 via-accent-600/10 to-surface-200 flex items-center justify-center text-xs text-white/40 font-medium">
-                No cover photo uploaded
+                {t('settings.no_cover', locale)}
               </div>
             )}
             
@@ -207,7 +210,7 @@ export default function ProfileSettings() {
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cover:opacity-100 flex items-center justify-center gap-3 transition-opacity">
               <label className="bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:scale-105 flex items-center gap-1.5">
                 <Camera size={12} />
-                <span>Upload</span>
+                <span>{t('settings.upload', locale)}</span>
                 <input type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" aria-label="Upload cover photo" />
               </label>
               {coverUrl && (
@@ -217,7 +220,7 @@ export default function ProfileSettings() {
                   className="bg-accent-600/80 hover:bg-accent-600 border border-white/20 text-white text-xs px-3 py-1.5 rounded-lg transition-all hover:scale-105 flex items-center gap-1.5"
                 >
                   <Trash2 size={12} />
-                  <span>Remove</span>
+                  <span>{t('settings.remove', locale)}</span>
                 </button>
               )}
             </div>
@@ -228,30 +231,30 @@ export default function ProfileSettings() {
         <div className="glass-card p-6 space-y-4">
           <div className="space-y-1.5">
             <label htmlFor="username" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <AtSign size={10}/> Username
+              <AtSign size={10}/> {t('settings.username', locale)}
             </label>
             <input id="username" type="text" value={username} onChange={e=>setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g,''))} className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none" maxLength={20}/>
           </div>
           
           <div className="space-y-1.5">
             <label htmlFor="fullName" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <User size={10}/> Full Name
+              <User size={10}/> {t('settings.full_name', locale)}
             </label>
             <input id="fullName" type="text" value={fullName} onChange={e=>setFullName(e.target.value)} className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none"/>
           </div>
           
           <div className="space-y-1.5">
             <label htmlFor="email" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <Mail size={10}/> Email
+              <Mail size={10}/> {t('settings.email', locale)}
             </label>
             <input id="email" type="email" value={user.email||''} disabled className="w-full bg-white/3 border border-white/5 rounded-xl px-4 py-3 text-sm text-white/30 cursor-not-allowed"/>
           </div>
           
           <div className="space-y-1.5">
             <label htmlFor="bio" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <FileText size={10}/> Bio
+              <FileText size={10}/> {t('settings.bio', locale)}
             </label>
-            <textarea id="bio" value={bio} onChange={e=>setBio(e.target.value)} placeholder="Tell us about yourself..." rows={4} maxLength={500} className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none resize-none"/>
+            <textarea id="bio" value={bio} onChange={e=>setBio(e.target.value)} placeholder={t("settings.bio_ph", locale)} rows={4} maxLength={500} className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none resize-none"/>
             <p className="text-[10px] text-white/15 text-right">{bio.length}/500</p>
           </div>
         </div>
@@ -262,7 +265,7 @@ export default function ProfileSettings() {
             Sign Out
           </button>
           <button type="submit" disabled={saving} className="flex items-center gap-2 bg-gradient-to-r from-brand-500 to-accent-500 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg shadow-brand-500/15 disabled:opacity-50 transition-all hover:scale-105 active:scale-95">
-            {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Save Changes
+            {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} {t('settings.save_changes', locale)}
           </button>
         </div>
       </form>
@@ -272,22 +275,22 @@ export default function ProfileSettings() {
         <div>
           <h2 className="text-lg font-heading font-bold text-white tracking-tight flex items-center gap-2">
             <Lock size={18} className="text-brand-400" />
-            Change Password
+            {t('settings.change_password', locale)}
           </h2>
-          <p className="text-white/30 text-xs mt-0.5">Secure your account by updating your password.</p>
+          <p className="text-white/30 text-xs mt-0.5">{t('settings.pw_desc', locale)}</p>
         </div>
         
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label htmlFor="newPassword" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <Lock size={10} /> New Password
+              <Lock size={10} /> {t('settings.new_password', locale)}
             </label>
             <input
               id="newPassword"
               type="password"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              placeholder="Min 6 characters"
+              placeholder={t("settings.pw_min_ph", locale)}
               className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none"
               minLength={6}
             />
@@ -295,14 +298,14 @@ export default function ProfileSettings() {
           
           <div className="space-y-1.5">
             <label htmlFor="confirmNewPassword" className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <Lock size={10} /> Confirm New Password
+              <Lock size={10} /> {t('settings.confirm_password', locale)}
             </label>
             <input
               id="confirmNewPassword"
               type="password"
               value={confirmNewPassword}
               onChange={e => setConfirmNewPassword(e.target.value)}
-              placeholder="Re-enter new password"
+              placeholder={t("settings.reenter_ph", locale)}
               className="w-full bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-500/30 outline-none"
               minLength={6}
             />
@@ -317,7 +320,7 @@ export default function ProfileSettings() {
             {updatingPassword ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
-              <span>Update Password</span>
+              <span>{t('settings.update_password', locale)}</span>
             )}
           </button>
         </div>

@@ -1,18 +1,21 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MessageSquare, Shield, Zap, Users, BookOpen, Lock } from 'lucide-react';
+import { GraduationCap, BookOpen, Lightbulb, Users, Globe2, HeartHandshake } from 'lucide-react';
+import { useLanguageStore } from '@/stores/language-store';
+import { t, type Locale } from '@/lib/i18n';
 
-const FEATURES = [
-  { icon: MessageSquare, title: 'Real-Time Chat', description: 'Join live debates and discussions with instant message delivery and reactions.', color: 'from-brand-500 to-brand-300', delay: 0 },
-  { icon: Shield, title: 'Private Messaging', description: 'Send private messages directly to Hisham. Encrypted and confidential.', color: 'from-accent-500 to-accent-400', delay: 0.1 },
-  { icon: Zap, title: 'Instant Reactions', description: 'Express your thoughts with emoji reactions on posts and chat messages.', color: 'from-yellow-500 to-brand-500', delay: 0.2 },
-  { icon: Users, title: 'Community Feed', description: "Follow Hisham's thoughts and join the public discourse with comments.", color: 'from-violet-500 to-purple-400', delay: 0.3 },
-  { icon: BookOpen, title: 'Knowledge Sharing', description: 'Educational content bridging Islamic scholarship with modern thought.', color: 'from-emerald-500 to-teal-400', delay: 0.4 },
-  { icon: Lock, title: 'Secure & Private', description: 'Your data is protected with enterprise-grade security and authentication.', color: 'from-blue-500 to-cyan-400', delay: 0.5 },
+const FEATURES = (locale: Locale) => [
+  { icon: GraduationCap, title: t('exp.teaching', locale), description: t('feat.teaching_desc', locale), color: 'from-brand-500 to-brand-300', delay: 0 },
+  { icon: BookOpen, title: t('exp.research', locale), description: t('feat.research_desc', locale), color: 'from-accent-500 to-accent-400', delay: 0.1 },
+  { icon: Lightbulb, title: t('exp.curriculum', locale), description: t('feat.curriculum_desc', locale), color: 'from-yellow-500 to-brand-500', delay: 0.2 },
+  { icon: Users, title: t('exp.mentoring', locale), description: t('feat.mentoring_desc', locale), color: 'from-violet-500 to-purple-400', delay: 0.3 },
+  { icon: Globe2, title: t('exp.dawah', locale), description: t('feat.dawah_desc', locale), color: 'from-emerald-500 to-teal-400', delay: 0.4 },
+  { icon: HeartHandshake, title: t('exp.community', locale), description: t('feat.community_desc', locale), color: 'from-blue-500 to-cyan-400', delay: 0.5 },
 ];
 
 export default function FeaturesSection() {
+  const { locale } = useLanguageStore();
   return (
     <section className="py-20 md:py-28">
       <motion.div
@@ -21,17 +24,17 @@ export default function FeaturesSection() {
         viewport={{ once: true, margin: '-100px' }}
         className="text-center mb-14"
       >
-        <p className="text-brand-400 font-mono tracking-widest uppercase text-xs mb-3">Everything you need</p>
+        <p className="text-brand-400 font-mono tracking-widest uppercase text-xs mb-3">{t('feat.what_i_do', locale)}</p>
         <h2 className="text-3xl md:text-5xl font-heading font-bold text-white tracking-tight mb-4">
-          Platform <span className="gradient-text">Features</span>
+          {t('features.title', locale).split(' ').slice(0, -1).join(' ')} <span className="gradient-text">{t('features.title', locale).split(' ').slice(-1)}</span>
         </h2>
         <p className="text-white/35 max-w-lg mx-auto text-sm leading-relaxed">
-          A comprehensive social and intellectual space designed for meaningful connections.
+          {t('feat.subtitle', locale)}
         </p>
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-        {FEATURES.map((feature) => (
+        {FEATURES(locale).map((feature) => (
           <motion.div
             key={feature.title}
             initial={{ opacity: 0, y: 20 }}

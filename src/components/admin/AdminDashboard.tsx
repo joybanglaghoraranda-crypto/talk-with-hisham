@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Users, MessageSquare, Rss, Mail, Send, Loader2, Trash2, Clock } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatRelativeTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { PrivateMessage, Profile } from '@/lib/types';
 
 export default function AdminDashboard() {
+  const { locale } = useLanguageStore();
   const { user, isAdmin } = useAuthStore();
   const [activeTab, setActiveTab] = useState('messages');
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
@@ -43,40 +46,40 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase.from('private_messages').update({ admin_reply: text, admin_reply_at: new Date().toISOString() }).eq('id', msgId);
       if (error) throw error;
-      toast.success('Reply sent');
+      toast.success(t('admin.reply_sent', locale));
       setReplyText(prev => ({ ...prev, [msgId]: '' }));
       fetchAll();
-    } catch { toast.error('Failed to reply'); } finally { setReplying(null); }
+    } catch { toast.error(t('admin.reply_fail', locale)); } finally { setReplying(null); }
   };
 
   const handleDeleteMsg = async (msgId: string) => {
-    if (!confirm('Delete this message?')) return;
+    if (!confirm(t('admin.confirm_del', locale))) return;
     await supabase.from('private_messages').delete().eq('id', msgId);
     setMessages(prev => prev.filter(m => m.id !== msgId));
-    toast.success('Deleted');
+    toast.success(t('admin.deleted', locale));
   };
 
-  if (!isAdmin) return (<div className="flex flex-col items-center justify-center min-h-[50vh] text-center"><Shield className="text-white/10 mb-4" size={48} /><h2 className="text-xl font-heading font-bold text-white mb-2">Access Denied</h2></div>);
+  if (!isAdmin) return (<div className="flex flex-col items-center justify-center min-h-[50vh] text-center"><Shield className="text-white/10 mb-4" size={48} /><h2 className="text-xl font-heading font-bold text-white mb-2">{t('admin.denied', locale)}</h2></div>);
 
   const TABS = [
-    { key: 'messages', label: 'Messages', icon: Mail, count: stats.privates },
-    { key: 'users', label: 'Users', icon: Users, count: stats.users },
+    { key: 'messages', label: t('admin.tab_msgs', locale), icon: Mail, count: stats.privates },
+    { key: 'users', label: t('admin.tab_users', locale), icon: Users, count: stats.users },
   ];
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-5xl mx-auto py-6">
       <div className="mb-6 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shadow-lg shadow-brand-500/20"><Shield size={18} className="text-white" /></div>
-        <div><h1 className="text-2xl font-heading font-bold text-white tracking-tight">Admin Dashboard</h1><p className="text-white/30 text-xs">Manage your platform</p></div>
+        <div><h1 className="text-2xl font-heading font-bold text-white tracking-tight">{t('admin.title', locale)}</h1><p className="text-white/30 text-xs">{t('admin.subtitle', locale)}</p></div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Users', value: stats.users, icon: Users, color: 'from-brand-500 to-brand-300' },
-          { label: 'Posts', value: stats.posts, icon: Rss, color: 'from-violet-500 to-purple-400' },
-          { label: 'Chat Messages', value: stats.messages, icon: MessageSquare, color: 'from-accent-500 to-accent-400' },
-          { label: 'Private Messages', value: stats.privates, icon: Mail, color: 'from-emerald-500 to-teal-400' },
+          { label: t('admin.tab_users', locale), value: stats.users, icon: Users, color: 'from-brand-500 to-brand-300' },
+          { label: t('admin.st_posts', locale), value: stats.posts, icon: Rss, color: 'from-violet-500 to-purple-400' },
+          { label: t('admin.st_chat', locale), value: stats.messages, icon: MessageSquare, color: 'from-accent-500 to-accent-400' },
+          { label: t('admin.st_priv', locale), value: stats.privates, icon: Mail, color: 'from-emerald-500 to-teal-400' },
         ].map(s => (
           <div key={s.label} className="glass-card p-4">
             <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${s.color} flex items-center justify-center mb-2`}><s.icon size={14} className="text-white" /></div>
@@ -99,7 +102,7 @@ export default function AdminDashboard() {
         <>
           {activeTab === 'messages' && (
             <div className="space-y-3">
-              {messages.length === 0 ? <div className="glass-card py-12 text-center"><p className="text-white/20 text-sm">No private messages.</p></div> : messages.map(msg => (
+              {messages.length === 0 ? <div className="glass-card py-12 text-center"><p className="text-white/20 text-sm">{t('admin.no_msgs', locale)}</p></div> : messages.map(msg => (
                 <div key={msg.id} className="glass-card p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
@@ -107,12 +110,12 @@ export default function AdminDashboard() {
                       <p className="text-sm text-white/60 leading-relaxed">{msg.message}</p>
                       <p className="text-[10px] text-white/15 mt-1 flex items-center gap-1"><Clock size={10}/>{formatRelativeTime(msg.created_at)}</p>
                     </div>
-                    <button onClick={() => handleDeleteMsg(msg.id)} className="p-1.5 text-white/15 hover:text-accent-400 transition-colors" title="Delete message"><Trash2 size={14}/></button>
+                    <button onClick={() => handleDeleteMsg(msg.id)} className="p-1.5 text-white/15 hover:text-accent-400 transition-colors" title={t('admin.delete', locale)}><Trash2 size={14}/></button>
                   </div>
-                  {msg.admin_reply && <div className="mt-3 pt-3 border-t border-white/5"><p className="text-[10px] text-green-400/50 uppercase tracking-widest font-semibold mb-1">Your Reply</p><p className="text-sm text-white/50">{msg.admin_reply}</p></div>}
+                  {msg.admin_reply && <div className="mt-3 pt-3 border-t border-white/5"><p className="text-[10px] text-green-400/50 uppercase tracking-widest font-semibold mb-1">{t('admin.your_reply', locale)}</p><p className="text-sm text-white/50">{msg.admin_reply}</p></div>}
                   {!msg.admin_reply && (
                     <div className="mt-3 pt-3 border-t border-white/5 flex gap-2">
-                      <input type="text" placeholder="Type a reply..." value={replyText[msg.id]||''} onChange={e=>setReplyText(prev=>({...prev,[msg.id]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&handleReply(msg.id)} className="flex-1 bg-white/3 border border-white/8 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand-500/30"/>
+                      <input type="text" placeholder={t("admin.reply_ph", locale)} value={replyText[msg.id]||''} onChange={e=>setReplyText(prev=>({...prev,[msg.id]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&handleReply(msg.id)} className="flex-1 bg-white/3 border border-white/8 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand-500/30"/>
                       <button onClick={()=>handleReply(msg.id)} disabled={replying===msg.id||!replyText[msg.id]?.trim()} className="p-2 bg-brand-500/20 rounded-lg text-brand-400 hover:bg-brand-500/30 disabled:opacity-20 transition-all">{replying===msg.id?<Loader2 size={13} className="animate-spin"/>:<Send size={13}/>}</button>
                     </div>
                   )}

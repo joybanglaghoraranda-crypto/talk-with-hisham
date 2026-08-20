@@ -6,6 +6,8 @@ import {
   Send, Loader2, MessageCircle, Share2, Smile, ArrowLeft, Check, User,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useLanguageStore } from '@/stores/language-store';
+import { t } from '@/lib/i18n';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { FEED_EMOJIS } from '@/lib/constants';
 import { formatRelativeTime, sanitizeUrl } from '@/lib/utils';
@@ -14,6 +16,7 @@ import type { Post, Comment } from '@/lib/types';
 import Link from 'next/link';
 
 export default function PostDetailClient({ postId }: { postId: string }) {
+  const { locale } = useLanguageStore();
   const { user } = useAuthStore();
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -85,7 +88,7 @@ export default function PostDetailClient({ postId }: { postId: string }) {
       content,
     });
     if (error) {
-      toast.error('Failed to post comment');
+      toast.error(t('post.cmt_fail', locale));
       return;
     }
     setNewComment('');
@@ -106,10 +109,10 @@ export default function PostDetailClient({ postId }: { postId: string }) {
     try {
       await navigator.clipboard.writeText(postUrl);
       setCopied(true);
-      toast.success('Link copied!');
+      toast.success(t('post.link_copied', locale));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Failed to copy link');
+      toast.error(t('post.copy_fail', locale));
     }
   };
 
@@ -117,8 +120,8 @@ export default function PostDetailClient({ postId }: { postId: string }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
         <MessageCircle className="text-white/10 mb-4" size={48} />
-        <h2 className="text-xl font-heading font-bold text-white mb-2">Sign in to view this post</h2>
-        <p className="text-white/35 text-sm">You need to be signed in to view posts.</p>
+        <h2 className="text-xl font-heading font-bold text-white mb-2">{t('post.signin_t', locale)}</h2>
+        <p className="text-white/35 text-sm">{t('post.signin_d', locale)}</p>
       </div>
     );
   }
@@ -144,8 +147,8 @@ export default function PostDetailClient({ postId }: { postId: string }) {
   if (!post) {
     return (
       <div className="max-w-2xl mx-auto py-6 text-center">
-        <p className="text-white/30 text-sm">Post not found.</p>
-        <Link href="/feed" className="text-brand-400 text-sm mt-2 inline-block hover:underline">← Back to Feed</Link>
+        <p className="text-white/30 text-sm">{t('post.not_found', locale)}</p>
+        <Link href="/feed" className="text-brand-400 text-sm mt-2 inline-block hover:underline">← {t('post.back_feed', locale)}</Link>
       </div>
     );
   }
@@ -155,7 +158,7 @@ export default function PostDetailClient({ postId }: { postId: string }) {
   return (
     <div className="max-w-2xl mx-auto py-6">
       <Link href="/feed" className="flex items-center gap-2 text-white/40 hover:text-white text-sm mb-4 transition-colors">
-        <ArrowLeft size={16} /> Back to Feed
+        <ArrowLeft size={16} /> {t('post.back_feed', locale)}
       </Link>
 
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6">
@@ -172,7 +175,7 @@ export default function PostDetailClient({ postId }: { postId: string }) {
             <div className="flex items-center gap-2">
               <p className="text-base font-semibold text-white">{post.profiles?.full_name || post.profiles?.username || 'Unknown'}</p>
               {post.profiles?.username === 'hisham' && (
-                <span className="text-[9px] bg-brand-500/10 text-brand-400 px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider">Author</span>
+                <span className="text-[9px] bg-brand-500/10 text-brand-400 px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider">{t('post.author', locale)}</span>
               )}
             </div>
             <p className="text-xs text-white/25">@{post.profiles?.username} · {formatRelativeTime(post.created_at)}</p>
@@ -184,7 +187,7 @@ export default function PostDetailClient({ postId }: { postId: string }) {
 
         {post.image_url && (
           <div className="mb-4 rounded-xl overflow-hidden border border-white/5">
-            <img src={sanitizeUrl(post.image_url)} alt="Post attachment" className="w-full max-h-[500px] object-cover" loading="lazy" />
+            <img src={sanitizeUrl(post.image_url)} alt={t("post.attach_alt", locale)} className="w-full max-h-[500px] object-cover" loading="lazy" />
           </div>
         )}
 
@@ -215,13 +218,13 @@ export default function PostDetailClient({ postId }: { postId: string }) {
         {/* Actions */}
         <div className="flex items-center gap-1 pt-3 border-t border-white/5">
           <button onClick={() => setActiveEmoji(!activeEmoji)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all">
-            <Smile size={14} /> React
+            <Smile size={14} /> {t('chat.react', locale)}
           </button>
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all">
-            <MessageCircle size={14} /> {comments.length || ''} Comment
+            <MessageCircle size={14} /> {comments.length || ''} {t('post.comment', locale)}
           </button>
           <button onClick={handleShare} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/30 hover:text-white hover:bg-white/5 transition-all">
-            {copied ? <Check size={14} className="text-green-400" /> : <Share2 size={14} />} Share
+            {copied ? <Check size={14} className="text-green-400" /> : <Share2 size={14} />} {t('post.share', locale)}
           </button>
         </div>
 
@@ -244,12 +247,12 @@ export default function PostDetailClient({ postId }: { postId: string }) {
       {/* Comments Section */}
       <div className="glass-card p-6 mt-4">
         <h3 className="text-sm font-heading font-bold text-white mb-4">
-          Comments {comments.length > 0 && <span className="text-white/30">({comments.length})</span>}
+          {t('post.comments', locale)} {comments.length > 0 && <span className="text-white/30">({comments.length})</span>}
         </h3>
 
         <div className="space-y-3 mb-4">
           {comments.length === 0 ? (
-            <p className="text-white/20 text-xs text-center py-4">No comments yet. Be the first!</p>
+            <p className="text-white/20 text-xs text-center py-4">{t('post.no_comments', locale)}</p>
           ) : (
             comments.map((comment) => {
               const commentAvatar = comment.profiles?.avatar_url ? sanitizeUrl(comment.profiles.avatar_url) : '';
@@ -279,7 +282,7 @@ export default function PostDetailClient({ postId }: { postId: string }) {
         <div className="flex gap-2 items-center pt-3 border-t border-white/5">
           <input
             type="text"
-            placeholder="Write a comment..."
+            placeholder={t("feed.comment_ph", locale)}
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleComment()}
@@ -289,7 +292,7 @@ export default function PostDetailClient({ postId }: { postId: string }) {
             onClick={handleComment}
             disabled={!newComment.trim()}
             className="p-2.5 bg-brand-500/20 rounded-lg text-brand-400 hover:bg-brand-500/30 disabled:opacity-20 transition-all"
-            title="Send comment"
+            title={t('post.send_cmt', locale)}
           >
             <Send size={15} />
           </button>
