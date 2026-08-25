@@ -10,8 +10,10 @@ import AuthModal from '@/components/auth/AuthModal';
 import { toast } from 'sonner';
 import { useLanguageStore } from '@/stores/language-store';
 import { t } from '@/lib/i18n';
-import DailyWisdom from '@/components/widgets/DailyWisdom';
-import AudioReflectionPlayer from '@/components/widgets/AudioReflectionPlayer';
+import dynamic from 'next/dynamic';
+
+const DailyWisdom = dynamic(() => import('@/components/widgets/DailyWisdom'), { ssr: false });
+const AudioReflectionPlayer = dynamic(() => import('@/components/widgets/AudioReflectionPlayer'), { ssr: false });
 
 export default function HomePage() {
   const { user } = useAuthStore();

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef } from 'react';
 
@@ -9,144 +9,101 @@ interface Particle {
   vy: number;
   size: number;
   opacity: number;
-  hue: number;
 }
 
 export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Respect user's reduced motion preference
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
     let particles: Particle[] = [];
     let animId: number;
-    let mouseX = -1000;
-    let mouseY = -1000;
-    let scrollY = 0;
+    let isRunning = true;
 
     function resize() {
-      canvas!.width = window.innerWidth;
-      canvas!.height = window.innerHeight;
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
       init();
     }
 
     function init() {
-      const isMobile = canvas!.width < 768;
-      const maxCount = isMobile ? 45 : 100;
-      const divisor = isMobile ? 16000 : 10000;
-      const count = Math.min(maxCount, Math.floor((canvas!.width * canvas!.height) / divisor));
+      if (!canvas) return;
+      const isMobile = canvas.width < 768;
+      const count = isMobile ? 12 : 24; // Very lightweight count
       particles = [];
       for (let i = 0; i < count; i++) {
         particles.push({
-          x: Math.random() * canvas!.width,
-          y: Math.random() * canvas!.height,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
-          size: Math.random() * 3 + 1,
-          opacity: Math.random() * 0.6 + 0.2,
-          hue: 120 + Math.random() * 30, // green tones 120-150
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+          size: Math.random() * 2 + 1,
+          opacity: Math.random() * 0.35 + 0.1,
         });
       }
     }
 
     function draw() {
-      if (!ctx || !canvas) return;
+      if (!ctx || !canvas || !isRunning) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const parallaxY = scrollY * 0.1;
-
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
-        p.x += p.vx + (mouseX - p.x) * 0.0005;
-        p.y += p.vy + (mouseY - p.y) * 0.0005;
+        p.x += p.vx;
+        p.y += p.vy;
 
-        const drawY = p.y + parallaxY * (p.x / canvas.width);
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
 
-        if (p.x < -20) p.x = canvas.width + 20;
-        if (p.x > canvas.width + 20) p.x = -20;
-        if (drawY < -20) p.y = canvas.height + 20 + parallaxY;
-        if (drawY > canvas.height + 20) p.y = -20 - parallaxY;
-
-        // Brighter glow dot
+        ctx.globalAlpha = p.opacity;
         ctx.beginPath();
-        ctx.arc(p.x, drawY, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${p.hue}, 70%, 55%, ${p.opacity})`;
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
-
-        // Glow halo
-        const distToMouse = Math.hypot(p.x - mouseX, drawY - mouseY);
-        const mouseBoost = distToMouse < 180 ? (1 - distToMouse / 180) * 0.15 : 0;
-        ctx.beginPath();
-        ctx.arc(p.x, drawY, p.size * 3, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${p.hue}, 70%, 55%, ${p.opacity * 0.08 + mouseBoost})`;
-        ctx.fill();
-
-        // Connections
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const drawY2 = p2.y + parallaxY * (p2.x / canvas.width);
-          const dx = p.x - p2.x;
-          const dy = drawY - drawY2;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          const linkDist = canvas!.width < 768 ? 110 : 150;
-          if (dist < linkDist) {
-            const alpha = (1 - dist / linkDist) * 0.25;
-            const midHue = (p.hue + p2.hue) / 2;
-            ctx.beginPath();
-            ctx.moveTo(p.x, drawY);
-            ctx.lineTo(p2.x, drawY2);
-            ctx.strokeStyle = `hsla(${midHue}, 60%, 60%, ${alpha})`;
-            ctx.lineWidth = Math.max(0.3, 1 - dist / 150);
-            ctx.stroke();
-          }
-        }
       }
     }
 
     function animate() {
-      draw();
-      animId = requestAnimationFrame(animate);
+      if (isRunning) {
+        draw();
+        animId = requestAnimationFrame(animate);
+      }
     }
+
+    // Pause when tab is inactive to save 100% CPU
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        isRunning = false;
+        cancelAnimationFrame(animId);
+      } else {
+        isRunning = true;
+        animate();
+      }
+    };
 
     resize();
     animate();
 
-    const onMouse = (e: MouseEvent) => { mouseX = e.clientX; mouseY = e.clientY; };
-    const onClick = (e: MouseEvent) => {
-      // Burst particles on click
-      for (let i = 0; i < 12; i++) {
-        const angle = (Math.PI * 2 * i) / 12 + Math.random() * 0.5;
-        const speed = 1.5 + Math.random() * 2.5;
-        particles.push({
-          x: mouseX,
-          y: mouseY,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          size: Math.random() * 3 + 1.5,
-          opacity: 0.7 + Math.random() * 0.3,
-          hue: 100 + Math.random() * 60,
-        });
-      }
-      // Cap total particles
-      if (particles.length > 200) particles.splice(0, particles.length - 200);
-    };
-    const onScroll = () => { scrollY = window.scrollY; };
-
-    window.addEventListener('resize', resize);
-    window.addEventListener('click', onClick);
-    window.addEventListener('mousemove', onMouse);
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', resize, { passive: true });
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      isRunning = false;
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', onMouse);
-      window.removeEventListener('click', onClick);
-      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, []);
 
@@ -155,7 +112,7 @@ export default function ParticleBackground() {
       ref={canvasRef}
       aria-hidden="true"
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 0, opacity: 0.85 }}
+      style={{ zIndex: 0, opacity: 0.7 }}
     />
   );
 }

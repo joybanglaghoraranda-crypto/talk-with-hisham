@@ -4,14 +4,9 @@ import Providers from './providers';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import MobileTabBar from '@/components/layout/MobileTabBar';
-import ReadingProgress from '@/components/layout/ReadingProgress';
-import BackToTop from '@/components/layout/BackToTop';
-import PwaRegister from '@/components/layout/PwaRegister';
 import PageTransition from '@/components/layout/PageTransition';
 import LanguageInit from '@/components/layout/LanguageInit';
-import ParticleBackground from '@/components/layout/ParticleBackground';
-import CommandPalette from '@/components/layout/CommandPalette';
-import AiAssistantModal from '@/components/widgets/AiAssistantModal';
+import ClientLayoutWidgets from '@/components/layout/ClientLayoutWidgets';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/react';
 import { Sora, Inter, JetBrains_Mono } from 'next/font/google';
@@ -233,18 +228,13 @@ export default function RootLayout({
       <body className="relative min-h-screen bg-surface-0 text-white overflow-x-hidden font-sans">
         <Providers>
           <LanguageInit />
-          <ParticleBackground />
-          <ReadingProgress />
           <Navbar />
           <main className="relative z-10 pt-20 pb-20 md:pb-0 min-h-[85vh]">
             <PageTransition>{children}</PageTransition>
           </main>
           <Footer />
           <MobileTabBar />
-          <BackToTop />
-          <PwaRegister />
-          <CommandPalette />
-          <AiAssistantModal />
+          <ClientLayoutWidgets />
           <Toaster
             richColors
             position="top-right"
