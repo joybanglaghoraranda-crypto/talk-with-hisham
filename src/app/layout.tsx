@@ -10,6 +10,8 @@ import PwaRegister from '@/components/layout/PwaRegister';
 import PageTransition from '@/components/layout/PageTransition';
 import LanguageInit from '@/components/layout/LanguageInit';
 import ParticleBackground from '@/components/layout/ParticleBackground';
+import CommandPalette from '@/components/layout/CommandPalette';
+import AiAssistantModal from '@/components/widgets/AiAssistantModal';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/react';
 import { Sora, Inter, JetBrains_Mono } from 'next/font/google';
@@ -52,12 +54,21 @@ export const metadata: Metadata = {
       'Educator and researcher bridging classical Islamic scholarship with modern education. Teaching, research, curriculum development, and youth mentoring.',
     type: 'website',
     siteName: 'Muhibbullah Hisham',
+    images: [
+      {
+        url: '/api/og',
+        width: 1200,
+        height: 630,
+        alt: 'Talk with Hisham — Muhibbullah Hisham',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Muhibbullah Hisham — Educator, Researcher & Mentor',
     description:
       'Educator and researcher bridging classical Islamic scholarship with modern education. Teaching, research, curriculum development, and youth mentoring.',
+    images: ['/api/og'],
   },
   icons: {
     icon: [
@@ -232,6 +243,8 @@ export default function RootLayout({
           <MobileTabBar />
           <BackToTop />
           <PwaRegister />
+          <CommandPalette />
+          <AiAssistantModal />
           <Toaster
             richColors
             position="top-right"

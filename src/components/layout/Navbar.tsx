@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, Info, Rss, MessageSquare, Mail, Shield, User, LogIn, LogOut,
   Menu, X, Bell, ChevronDown, Settings, CheckCheck, Trash2,
-  Heart, MessageCircle, Sparkles,
+  Heart, MessageCircle, Sparkles, Search,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useNotificationStore } from '@/stores/notification-store';
@@ -142,6 +142,15 @@ export default function Navbar() {
 
         {/* Right Side */}
         <div className="hidden md:flex items-center gap-1.5">
+          <button
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/4 border border-white/8 hover:bg-white/8 hover:border-brand-500/30 text-white/50 hover:text-white transition-all text-xs font-mono group"
+            title="Search (Ctrl+K)"
+          >
+            <Search size={13} className="text-white/40 group-hover:text-brand-400" />
+            <span className="text-[11px] text-white/30 hidden lg:inline">Search</span>
+            <kbd className="text-[9px] bg-white/6 px-1.5 py-0.5 rounded border border-white/10 text-white/40">⌘K</kbd>
+          </button>
           <LanguageSwitcher />
           {/* Notification Bell */}
           {user && (

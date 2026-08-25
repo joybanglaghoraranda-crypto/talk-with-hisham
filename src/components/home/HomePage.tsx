@@ -10,6 +10,8 @@ import AuthModal from '@/components/auth/AuthModal';
 import { toast } from 'sonner';
 import { useLanguageStore } from '@/stores/language-store';
 import { t } from '@/lib/i18n';
+import DailyWisdom from '@/components/widgets/DailyWisdom';
+import AudioReflectionPlayer from '@/components/widgets/AudioReflectionPlayer';
 
 export default function HomePage() {
   const { user } = useAuthStore();
@@ -176,6 +178,12 @@ export default function HomePage() {
               {item}
             </span>
           ))}
+        </div>
+
+        {/* Daily Reflections & Audio Note Widgets */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-12">
+          <DailyWisdom />
+          <AudioReflectionPlayer />
         </div>
 
         {/* CTA banner */}
