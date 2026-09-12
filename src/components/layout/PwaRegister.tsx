@@ -17,10 +17,9 @@ export default function PwaRegister() {
     const register = async () => {
       try {
         const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        // Force update check so v2 cache takes effect quickly
         await reg.update();
-      } catch (err) {
-        console.error('Service worker registration failed:', err);
+      } catch {
+        // Silently ignore registration failures in restricted/audit environments
       }
     };
     register();

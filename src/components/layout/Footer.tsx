@@ -23,9 +23,9 @@ export default function Footer() {
             <div className="w-7 h-7 rounded-md bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
               MH
             </div>
-            <span className="font-heading font-bold text-sm text-white/80">{SITE_CONFIG.name}</span>
-            <span className="hidden sm:inline text-white/15 text-xs">&middot;</span>
-            <span className="hidden sm:inline text-white/25 text-xs">
+            <span className="font-heading font-bold text-sm text-white">{SITE_CONFIG.name}</span>
+            <span className="hidden sm:inline text-white/40 text-xs">&middot;</span>
+            <span className="hidden sm:inline text-white/70 text-xs">
               &copy; {new Date().getFullYear()}
             </span>
           </div>
@@ -38,8 +38,9 @@ export default function Footer() {
                 href={social.href}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label={`Follow on ${social.label}`}
                 title={social.label}
-                className="w-8 h-8 rounded-lg border border-white/8 bg-white/3 hover:bg-white/8 flex items-center justify-center text-white/30 hover:text-white transition-all hover:scale-110 hover:border-brand-500/30"
+                className="w-8 h-8 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/80 hover:text-white transition-all hover:scale-110 hover:border-brand-500/30"
               >
                 <social.icon size={14} />
               </a>
@@ -47,9 +48,9 @@ export default function Footer() {
           </div>
 
           {/* Legal */}
-          <div className="flex items-center gap-4 text-white/25 text-xs">
-            <Link href="/privacy" className="hover:text-white/60 transition-colors">{t('footer.privacy', locale)}</Link>
-            <Link href="/terms" className="hover:text-white/60 transition-colors">{t('footer.terms', locale)}</Link>
+          <div className="flex items-center gap-4 text-white/70 text-xs">
+            <Link href="/privacy" aria-label="Privacy Policy" className="hover:text-white transition-colors">{t('footer.privacy', locale)}</Link>
+            <Link href="/terms" aria-label="Terms of Service" className="hover:text-white transition-colors">{t('footer.terms', locale)}</Link>
             <span className="sm:hidden">&copy; {new Date().getFullYear()}</span>
           </div>
         </div>

@@ -123,8 +123,8 @@ export default function Navbar() {
               className={cn(
                 'relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                 isActive(item.href)
-                  ? 'text-brand-400'
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
+                  ? 'text-brand-400 font-semibold'
+                  : 'text-white/85 hover:text-white hover:bg-white/10'
               )}
             >
               <item.icon size={15} />

@@ -48,13 +48,13 @@ export default function MobileTabBar() {
                 <Icon
                   size={23}
                   className={`relative transition-all ${
-                    isActive ? 'text-brand-400' : 'text-white/30'
+                    isActive ? 'text-brand-400' : 'text-white/70'
                   }`}
                   strokeWidth={isActive ? 2.4 : 1.8}
                 />
                 <span
                   className={`relative text-[10px] font-semibold transition-colors ${
-                    isActive ? 'text-brand-400' : 'text-white/30'
+                    isActive ? 'text-brand-400' : 'text-white/70'
                   }`}
                 >
                   {tab.label}
