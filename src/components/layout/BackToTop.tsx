@@ -40,7 +40,7 @@ export default function BackToTop() {
           exit={{ opacity: 0, scale: 0.6, y: 12 }}
           transition={{ type: 'spring', damping: 22, stiffness: 260 }}
           onClick={scrollToTop}
-          aria-label={t('misc.back_top', locale)}
+          aria-label={t('misc.back_top', locale) || 'Scroll back to top'}
           className="fixed z-50 right-4 bottom-24 md:bottom-6 flex items-center justify-center rounded-full shadow-xl shadow-black/40 hover:scale-105 active:scale-95 transition-transform bg-surface-800/90 backdrop-blur border border-white/10"
           style={{ width: size, height: size }}
         >

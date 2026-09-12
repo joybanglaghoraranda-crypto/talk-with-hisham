@@ -26,8 +26,8 @@ export default function LanguageSwitcher() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] transition-colors text-white/50 hover:text-white/80 text-xs"
-        aria-label={t('misc.switch_lang', locale)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-white/70 hover:text-white text-xs"
+        aria-label={t('misc.switch_lang', locale) || 'Switch language'}
       >
         <Globe size={13} />
         <span className="hidden sm:inline">{current.native}</span>

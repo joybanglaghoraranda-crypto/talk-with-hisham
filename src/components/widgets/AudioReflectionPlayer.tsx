@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, RotateCcw, Sparkles } from 'lucide-react';
@@ -93,20 +93,20 @@ export default function AudioReflectionPlayer({
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
-          <span className="font-mono text-[11px] uppercase tracking-widest text-brand-400 font-semibold">
+          <span className="font-mono text-xs uppercase tracking-widest text-brand-400 font-bold">
             {locale === 'bn' ? 'অডিও বার্তা' : 'Audio Note'}
           </span>
         </div>
-        <span className="font-mono text-[10px] text-white/30 tracking-wider">
+        <span className="font-mono text-[11px] text-white/70 tracking-wider">
           {currentTime} / {durationText}
         </span>
       </div>
 
       {/* Title */}
-      <h4 className="text-sm font-semibold text-white/90 truncate mb-1">
+      <h3 className="text-sm font-semibold text-white truncate mb-1">
         {title}
-      </h4>
-      <p className="text-[11px] text-white/40 mb-4 font-mono">{speaker}</p>
+      </h3>
+      <p className="text-xs text-white/70 mb-4 font-mono">{speaker}</p>
 
       {/* Progress Bar & Waveform Simulation */}
       <div className="space-y-2 mb-4">
@@ -122,7 +122,7 @@ export default function AudioReflectionPlayer({
                   height: isPlaying ? `${Math.max(6, (barHeight * (Math.random() * 0.5 + 0.75)))}px` : `${barHeight}px`,
                 }}
                 className={`w-1 rounded-full transition-all duration-150 ${
-                  isBarActive ? 'bg-brand-400 shadow-sm shadow-brand-500/50' : 'bg-white/10'
+                  isBarActive ? 'bg-brand-400 shadow-sm shadow-brand-500/50' : 'bg-white/20'
                 }`}
               />
             );
@@ -130,7 +130,7 @@ export default function AudioReflectionPlayer({
         </div>
 
         {/* Scrubber track */}
-        <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div
             style={{ width: `${progress}%` }}
             className="h-full bg-gradient-to-r from-brand-500 to-accent-500 rounded-full transition-all duration-150"
@@ -142,6 +142,7 @@ export default function AudioReflectionPlayer({
       <div className="flex items-center justify-between pt-1">
         <button
           onClick={togglePlay}
+          aria-label={isPlaying ? 'Pause audio reflection' : 'Play audio reflection'}
           className="flex items-center gap-2 bg-gradient-to-r from-brand-500 to-accent-500 hover:from-brand-600 hover:to-accent-600 text-white text-xs font-semibold py-2 px-5 rounded-xl shadow-lg shadow-brand-500/20 transition-all hover:scale-105 active:scale-95"
         >
           {isPlaying ? <Pause size={14} /> : <Play size={14} />}
@@ -155,7 +156,8 @@ export default function AudioReflectionPlayer({
               setCurrentTime('0:00');
               if (audioRef.current) audioRef.current.currentTime = 0;
             }}
-            className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+            aria-label="Restart audio from beginning"
+            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
             title="Restart"
           >
             <RotateCcw size={14} />
@@ -165,7 +167,8 @@ export default function AudioReflectionPlayer({
               setIsMuted(!isMuted);
               if (audioRef.current) audioRef.current.muted = !isMuted;
             }}
-            className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+            aria-label={isMuted ? 'Unmute audio reflection' : 'Mute audio reflection'}
+            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
             {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
           </button>

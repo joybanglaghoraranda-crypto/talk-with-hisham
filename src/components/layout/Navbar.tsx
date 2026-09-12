@@ -144,12 +144,13 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-1.5">
           <button
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/4 border border-white/8 hover:bg-white/8 hover:border-brand-500/30 text-white/50 hover:text-white transition-all text-xs font-mono group"
+            aria-label="Search pages and topics"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-brand-500/30 text-white/70 hover:text-white transition-all text-xs font-mono group"
             title="Search (Ctrl+K)"
           >
-            <Search size={13} className="text-white/40 group-hover:text-brand-400" />
-            <span className="text-[11px] text-white/30 hidden lg:inline">Search</span>
-            <kbd className="text-[9px] bg-white/6 px-1.5 py-0.5 rounded border border-white/10 text-white/40">⌘K</kbd>
+            <Search size={13} className="text-white/60 group-hover:text-brand-400" />
+            <span className="text-[11px] text-white/60 hidden lg:inline">Search</span>
+            <kbd className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded border border-white/15 text-white/70">⌘K</kbd>
           </button>
           <LanguageSwitcher />
           {/* Notification Bell */}
@@ -157,7 +158,8 @@ export default function Navbar() {
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setNotifOpen(!notifOpen)}
-                className="relative p-2 rounded-lg hover:bg-white/5 transition-colors text-white/50 hover:text-white"
+                aria-label="View notifications"
+                className="relative p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
               >
                 <Bell size={18} />
                 {unreadCount > 0 && (
@@ -178,18 +180,18 @@ export default function Navbar() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-80 max-h-[420px] bg-surface-100/98 backdrop-blur-2xl border border-white/8 rounded-2xl shadow-2xl overflow-hidden"
+                    className="absolute right-0 top-full mt-2 w-80 max-h-[420px] bg-surface-100/98 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
                   >
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                       <h3 className="text-sm font-heading font-bold text-white">{t('notif.title', locale)}</h3>
                       <div className="flex items-center gap-1">
                         {unreadCount > 0 && (
-                          <button onClick={markAllAsRead} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors" title={t('nav.mark_read', locale)}>
+                          <button onClick={markAllAsRead} aria-label="Mark all notifications as read" className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors" title={t('nav.mark_read', locale)}>
                             <CheckCheck size={14} />
                           </button>
                         )}
                         {notifications.length > 0 && (
-                          <button onClick={clearAll} className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-accent-400 transition-colors" title={t('nav.clear_all', locale)}>
+                          <button onClick={clearAll} aria-label="Clear all notifications" className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-accent-400 transition-colors" title={t('nav.clear_all', locale)}>
                             <Trash2 size={14} />
                           </button>
                         )}
@@ -198,14 +200,15 @@ export default function Navbar() {
                     <div className="overflow-y-auto max-h-[350px] custom-scrollbar">
                       {notifications.length === 0 ? (
                         <div className="py-12 text-center">
-                          <Bell className="mx-auto text-white/10 mb-3" size={28} />
-                          <p className="text-white/25 text-xs">{t('notif.empty', locale)}</p>
+                          <Bell className="mx-auto text-white/20 mb-3" size={28} />
+                          <p className="text-white/60 text-xs">{t('notif.empty', locale)}</p>
                         </div>
                       ) : (
                         notifications.slice(0, 20).map((notif) => (
                           <button
                             key={notif.id}
                             onClick={() => markAsRead(notif.id)}
+                            aria-label={`Notification: ${notif.title}`}
                             className={cn(
                               'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0',
                               !notif.read && 'bg-brand-500/5'
@@ -219,8 +222,8 @@ export default function Navbar() {
                                 <p className="text-xs font-semibold text-white truncate">{notif.title}</p>
                                 {!notif.read && <span className="w-1.5 h-1.5 rounded-full bg-brand-500 flex-shrink-0" />}
                               </div>
-                              <p className="text-[11px] text-white/40 truncate mt-0.5">{notif.body}</p>
-                              <p className="text-[10px] text-white/20 mt-1">{formatRelativeTime(notif.created_at)}</p>
+                              <p className="text-[11px] text-white/60 truncate mt-0.5">{notif.body}</p>
+                              <p className="text-[10px] text-white/40 mt-1">{formatRelativeTime(notif.created_at)}</p>
                             </div>
                           </button>
                         ))
@@ -237,13 +240,14 @@ export default function Navbar() {
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-white/70 hover:text-white"
+                aria-label="User Account Menu"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-white/80 hover:text-white"
               >
                 <div className="w-7 h-7 rounded-full bg-surface-300 flex items-center justify-center text-[11px] font-bold text-white overflow-hidden">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <User size={14} className="text-white/40" />
+                    <User size={14} className="text-white/60" />
                   )}
                 </div>
                 <ChevronDown size={14} className={cn('transition-transform', profileOpen && 'rotate-180')} />
@@ -262,24 +266,25 @@ export default function Navbar() {
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : (
-                          <User size={18} className="text-white/40" />
+                          <User size={18} className="text-white/60" />
                         )}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-white truncate">{displayName}</p>
-                        <p className="text-[10px] text-white/30 mt-0.5">{isAdmin ? 'Administrator' : 'Member'}</p>
+                        <p className="text-[10px] text-white/60 mt-0.5">{isAdmin ? 'Administrator' : 'Member'}</p>
                       </div>
                     </div>
                     <div className="py-1">
-                      <Link href="/profile" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                      <Link href="/profile" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors">
                         <User size={15} /> Profile
                       </Link>
-                      <Link href="/settings" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                      <Link href="/settings" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors">
                         <Settings size={15} /> Settings
                       </Link>
                       <button
                         onClick={() => signOut()}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-accent-400/80 hover:text-accent-400 hover:bg-accent-500/5 transition-colors"
+                        aria-label="Sign out of account"
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-accent-400 hover:text-accent-300 hover:bg-accent-500/10 transition-colors"
                       >
                         <LogOut size={15} /> Sign Out
                       </button>
@@ -291,6 +296,7 @@ export default function Navbar() {
           ) : (
             <button
               onClick={() => setAuthOpen(true)}
+              aria-label="Sign In to Talk with Hisham"
               className="flex items-center gap-2 bg-gradient-to-r from-brand-500 to-accent-500 hover:from-brand-600 hover:to-accent-600 px-5 py-2 rounded-lg text-white text-sm font-semibold shadow-lg shadow-brand-500/20 transition-all hover:scale-105 active:scale-95"
             >
               <LogIn size={15} />
@@ -304,7 +310,8 @@ export default function Navbar() {
           {user && (
             <button
               onClick={() => setNotifOpen(!notifOpen)}
-              className="relative p-2 rounded-lg hover:bg-white/5 text-white/50"
+              aria-label="View notifications"
+              className="relative p-2 rounded-lg hover:bg-white/5 text-white/70"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
@@ -316,7 +323,8 @@ export default function Navbar() {
           )}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-2 text-white/60 hover:text-white transition-colors"
+            aria-label="Toggle navigation menu"
+            className="p-2 text-white/80 hover:text-white transition-colors"
           >
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>

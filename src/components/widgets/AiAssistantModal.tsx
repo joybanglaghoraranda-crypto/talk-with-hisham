@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -118,7 +118,8 @@ export default function AiAssistantModal() {
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                aria-label="Close AI Assistant"
+                className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <X size={16} />
               </button>
@@ -140,13 +141,13 @@ export default function AiAssistantModal() {
                     className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
                       m.role === 'user'
                         ? 'bg-gradient-to-r from-brand-500 to-accent-500 text-white rounded-br-none'
-                        : 'bg-white/5 border border-white/8 text-white/90 rounded-bl-none'
+                        : 'bg-white/10 border border-white/10 text-white rounded-bl-none'
                     }`}
                   >
                     {m.content}
                   </div>
                   {m.role === 'user' && (
-                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white/60 flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white flex-shrink-0 mt-0.5">
                       <User size={12} />
                     </div>
                   )}
@@ -154,7 +155,7 @@ export default function AiAssistantModal() {
               ))}
 
               {loading && (
-                <div className="flex items-center gap-2 text-white/40 text-xs py-1">
+                <div className="flex items-center gap-2 text-white/70 text-xs py-1">
                   <Loader2 size={13} className="animate-spin text-brand-400" />
                   <span>{locale === 'bn' ? 'চিন্তা করছে...' : 'Thinking...'}</span>
                 </div>
@@ -162,16 +163,18 @@ export default function AiAssistantModal() {
             </div>
 
             {/* Input Form */}
-            <form onSubmit={handleSend} className="p-3 border-t border-white/8 bg-surface-200/30 flex items-center gap-2">
+            <form onSubmit={handleSend} className="p-3 border-t border-white/10 bg-surface-200/30 flex items-center gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                aria-label="Type your message to AI"
                 placeholder={locale === 'bn' ? 'প্রশ্ন লিখুন...' : 'Ask a question...'}
-                className="flex-1 bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-brand-500/40"
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/50 focus:outline-none focus:border-brand-500/50"
               />
               <button
                 type="submit"
+                aria-label="Send message to AI Assistant"
                 disabled={loading || !input.trim()}
                 className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white disabled:opacity-40 transition-all hover:scale-105 active:scale-95"
               >

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -83,18 +83,18 @@ export default function DailyWisdom() {
       <div className="absolute top-0 right-0 w-36 h-36 bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header with Hijri Date */}
-      <div className="flex items-center justify-between gap-2 border-b border-white/6 pb-3 mb-4">
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3 mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
+          <div className="w-7 h-7 rounded-lg bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-400">
             <BookOpen size={14} />
           </div>
-          <span className="font-mono text-xs uppercase tracking-widest text-brand-400 font-semibold">
+          <h3 className="font-mono text-xs uppercase tracking-widest text-brand-400 font-bold">
             {locale === 'bn' ? 'আজকের অনুপ্রেরণা' : 'Daily Reflection'}
-          </span>
+          </h3>
         </div>
 
         {hijriDate && (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/4 border border-white/6 text-[11px] font-mono text-white/50">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-mono text-white/80">
             <Moon size={11} className="text-brand-400" />
             <span>{hijriDate}</span>
           </div>
@@ -102,23 +102,24 @@ export default function DailyWisdom() {
       </div>
 
       {/* Arabic Quote */}
-      <p className="text-xl md:text-2xl font-serif text-right text-brand-200/90 leading-relaxed tracking-wide my-3 select-all">
+      <p className="text-xl md:text-2xl font-serif text-right text-brand-200 leading-relaxed tracking-wide my-3 select-all">
         {wisdom.arabic}
       </p>
 
       {/* Translation */}
-      <p className="text-xs md:text-sm text-white/70 leading-relaxed font-sans mt-2">
+      <p className="text-xs md:text-sm text-white/90 leading-relaxed font-sans mt-2">
         {locale === 'bn' ? wisdom.bengali : wisdom.english}
       </p>
 
       {/* Footer / Citation */}
-      <div className="flex items-center justify-between pt-4 mt-3 border-t border-white/4">
-        <span className="font-mono text-[10px] text-white/35 uppercase tracking-wider">
+      <div className="flex items-center justify-between pt-4 mt-3 border-t border-white/10">
+        <span className="font-mono text-[11px] text-white/70 uppercase tracking-wider font-medium">
           {wisdom.source}
         </span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 text-[11px] font-mono text-white/40 hover:text-brand-400 transition-colors"
+          aria-label="Copy daily wisdom quote to clipboard"
+          className="flex items-center gap-1.5 text-[11px] font-mono text-white/70 hover:text-brand-400 transition-colors"
         >
           {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
           <span>{copied ? (locale === 'bn' ? 'কপি হয়েছে' : 'Copied') : (locale === 'bn' ? 'কপি করুন' : 'Copy')}</span>

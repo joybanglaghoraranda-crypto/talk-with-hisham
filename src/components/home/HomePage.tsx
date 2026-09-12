@@ -86,13 +86,9 @@ export default function HomePage() {
         {/* Middle — nothing (negative space) */}
         <div />
 
-        {/* Bottom — Name + Role (Akash Tyagi: name bottom-left, copyright bottom-right) */}
+        {/* Bottom — Name + Role */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 80 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-          >
+          <div>
             {/* Name — large, mono-style for tech/nature hybrid feel */}
             <h1 className="font-mono text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[0.08em] uppercase text-white leading-[1.1] mb-3">
               Muhibbullah<br />
@@ -100,7 +96,7 @@ export default function HomePage() {
             </h1>
 
             {/* Role line */}
-            <p className="text-brand-400/80 font-mono text-xs md:text-sm tracking-[0.25em] uppercase mb-6">
+            <p className="text-brand-400 font-mono text-xs md:text-sm tracking-[0.25em] uppercase mb-6 font-semibold">
               Educator · Researcher · Mentor
             </p>
 
@@ -108,23 +104,26 @@ export default function HomePage() {
             <div className="flex flex-wrap items-center gap-4">
               <button
                 onClick={handleJoin}
-                className="flex items-center gap-2 text-white/60 hover:text-brand-400 font-mono text-xs tracking-wider uppercase transition-colors group"
+                aria-label="Start a conversation with Muhibbullah Hisham"
+                className="flex items-center gap-2 text-white/80 hover:text-brand-400 font-mono text-xs tracking-wider uppercase transition-colors group"
               >
                 <span>{t('home.start_convo', locale)}</span>
                 <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <span className="text-white/15 font-mono">/</span>
+              <span className="text-white/40 font-mono" aria-hidden="true">/</span>
               <Link
                 href="/about"
-                className="flex items-center gap-2 text-white/40 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors group"
+                aria-label="Read more about Muhibbullah Hisham"
+                className="flex items-center gap-2 text-white/70 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors group"
               >
                 <span>{t('nav.about', locale)}</span>
                 <ExternalLink size={12} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <span className="text-white/15 font-mono">/</span>
+              <span className="text-white/40 font-mono" aria-hidden="true">/</span>
               <button
                 onClick={copyEmail}
-                className="flex items-center gap-2 text-white/40 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors"
+                aria-label="Copy email address to clipboard"
+                className="flex items-center gap-2 text-white/70 hover:text-white font-mono text-xs tracking-wider uppercase transition-colors"
               >
                 <span>{copied ? 'Copied!' : 'Email'}</span>
                 {copied ? <Check size={12} className="text-green-400" /> : <Copy size={11} />}
@@ -139,43 +138,33 @@ export default function HomePage() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`Follow on ${social.label}`}
                   title={social.label}
-                  className="w-9 h-9 rounded-full border border-white/[0.06] hover:border-brand-500/20 flex items-center justify-center text-white/25 hover:text-brand-400 transition-all hover:scale-110"
+                  className="w-9 h-9 rounded-full border border-white/20 hover:border-brand-500/40 flex items-center justify-center text-white/70 hover:text-brand-400 transition-all hover:scale-110"
                 >
                   <social.icon size={14} />
                 </a>
               ))}
             </div>
-          </motion.div>
+          </div>
 
-          {/* Copyright — bottom-right (like Akash Tyagi) */}
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-            className="font-mono text-[10px] md:text-xs text-white/15 tracking-wider uppercase md:text-right"
-          >
+          {/* Copyright — bottom-right */}
+          <p className="font-mono text-[11px] md:text-xs text-white/60 tracking-wider uppercase md:text-right">
             © {new Date().getFullYear()} Muhibbullah Hisham
-          </motion.p>
+          </p>
         </div>
       </section>
 
       {/* Expertise Tags (below the fold) */}
-      <motion.section
-        initial={{ opacity: 0, y: 80 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-40px' }}
-        transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-        className="relative z-10 px-6 md:px-10 max-w-5xl mx-auto pb-20"
-      >
-        <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-brand-400/50 mb-5">
+      <section className="relative z-10 px-6 md:px-10 max-w-5xl mx-auto pb-20">
+        <h2 className="font-mono text-xs tracking-[0.2em] uppercase text-brand-400 mb-5 font-bold">
           Expertise
-        </p>
+        </h2>
         <div className="flex flex-wrap gap-2">
           {EXPERTISE.map((item) => (
             <span
               key={item}
-              className="px-4 py-2 bg-white/[0.02] border border-white/[0.05] rounded-full text-xs text-white/45 hover:text-white hover:bg-white/[0.05] hover:border-brand-500/15 transition-colors cursor-default font-mono tracking-wide"
+              className="px-4 py-2 bg-white/[0.04] border border-white/10 rounded-full text-xs text-white/80 hover:text-white hover:bg-white/[0.08] hover:border-brand-500/30 transition-colors cursor-default font-mono tracking-wide"
             >
               {item}
             </span>
@@ -189,22 +178,23 @@ export default function HomePage() {
         </div>
 
         {/* CTA banner */}
-        <div className="mt-16 relative overflow-hidden rounded-3xl bg-surface-200/40 border border-white/[0.04] p-8 md:p-12 text-center">
+        <div className="mt-16 relative overflow-hidden rounded-3xl bg-surface-200/40 border border-white/10 p-8 md:p-12 text-center">
           <div className="absolute top-0 left-1/3 w-64 h-64 bg-brand-500/[0.03] rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/3 w-64 h-64 bg-accent-500/[0.02] rounded-full blur-3xl" />
-          <p className="relative z-10 font-mono text-[10px] tracking-[0.2em] uppercase text-brand-400/50 mb-4">
+          <p className="relative z-10 font-mono text-xs tracking-[0.2em] uppercase text-brand-400 mb-4 font-semibold">
             {t('home.get_in_touch', locale)}
           </p>
           <h2 className="relative z-10 text-xl md:text-3xl font-heading font-bold text-white tracking-tight mb-3">
             Let&apos;s have a{' '}
             <span className="gradient-text">meaningful conversation</span>
           </h2>
-          <p className="relative z-10 text-white/25 text-sm mb-8 max-w-md mx-auto">
+          <p className="relative z-10 text-white/70 text-sm mb-8 max-w-md mx-auto">
             Whether it&apos;s education, research, collaboration, or simply a discussion.
           </p>
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={handleJoin}
+              aria-label="Join the community chat room"
               className="flex items-center gap-2 bg-gradient-to-r from-brand-500 to-accent-500 hover:from-brand-600 hover:to-accent-600 text-white font-semibold py-3 px-7 rounded-full transition-all hover:scale-[1.02] shadow-lg shadow-brand-500/20"
             >
               Join the Community
@@ -212,14 +202,15 @@ export default function HomePage() {
             </button>
             <a
               href={`mailto:${SITE_CONFIG.email}`}
-              className="flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/60 hover:text-white font-medium py-3 px-7 rounded-full transition-all"
+              aria-label="Send an email directly to Muhibbullah Hisham"
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/15 text-white/90 hover:text-white font-medium py-3 px-7 rounded-full transition-all"
             >
               <Mail size={14} />
               Email Directly
             </a>
           </div>
         </div>
-      </motion.section>
+      </section>
 
       <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
     </>

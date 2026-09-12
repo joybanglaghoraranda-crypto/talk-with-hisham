@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -211,8 +211,8 @@ export default function CommandPalette() {
               className="relative w-full max-w-xl bg-surface-100/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-10"
             >
               {/* Search Bar */}
-              <div className="flex items-center px-4 border-b border-white/8">
-                <Search size={18} className="text-white/40 mr-3 flex-shrink-0" />
+              <div className="flex items-center px-4 border-b border-white/10">
+                <Search size={18} className="text-white/60 mr-3 flex-shrink-0" />
                 <input
                   type="text"
                   value={query}
@@ -221,13 +221,15 @@ export default function CommandPalette() {
                     setSelectedIndex(0);
                   }}
                   onKeyDown={handleKeyDownList}
+                  aria-label="Search pages, actions, and topics"
                   placeholder={locale === 'bn' ? 'অনুসন্ধান করুন (যেমন: About, Feed, Email)...' : 'Search pages, actions, topics (e.g. About, Feed, Email)...'}
-                  className="w-full bg-transparent py-4 text-sm text-white placeholder-white/30 focus:outline-none font-sans"
+                  className="w-full bg-transparent py-4 text-sm text-white placeholder-white/50 focus:outline-none font-sans"
                   autoFocus
                 />
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg text-white/30 hover:text-white/80 hover:bg-white/5 transition-colors"
+                  aria-label="Close search"
+                  className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -236,7 +238,7 @@ export default function CommandPalette() {
               {/* Items List */}
               <div className="max-h-80 overflow-y-auto p-2 custom-scrollbar">
                 {filteredItems.length === 0 ? (
-                  <div className="py-10 text-center text-white/30 text-xs font-mono">
+                  <div className="py-10 text-center text-white/60 text-xs font-mono">
                     No matching results found for &quot;{query}&quot;
                   </div>
                 ) : (
@@ -248,23 +250,24 @@ export default function CommandPalette() {
                         key={item.id}
                         onClick={() => handleSelect(item)}
                         onMouseEnter={() => setSelectedIndex(idx)}
+                        aria-label={item.title}
                         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left transition-all ${
-                          isSelected ? 'bg-brand-500/15 text-brand-300 border border-brand-500/20' : 'text-white/70 hover:bg-white/5'
+                          isSelected ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30' : 'text-white/80 hover:bg-white/5'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div
                             className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                              isSelected ? 'bg-brand-500/20 text-brand-400' : 'bg-white/5 text-white/40'
+                              isSelected ? 'bg-brand-500/20 text-brand-400' : 'bg-white/10 text-white/60'
                             }`}
                           >
                             <Icon size={16} />
                           </div>
                           <div className="truncate">
-                            <p className="text-xs font-medium truncate">{item.title}</p>
+                            <p className="text-xs font-medium truncate text-white">{item.title}</p>
                           </div>
                         </div>
-                        <span className="text-[10px] font-mono text-white/20 uppercase tracking-widest px-2 py-0.5 rounded bg-white/5 flex-shrink-0">
+                        <span className="text-[10px] font-mono text-white/60 uppercase tracking-widest px-2 py-0.5 rounded bg-white/10 flex-shrink-0">
                           {item.category}
                         </span>
                       </button>
@@ -274,12 +277,12 @@ export default function CommandPalette() {
               </div>
 
               {/* Footer Tip */}
-              <div className="px-4 py-2.5 bg-black/40 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-white/30">
+              <div className="px-4 py-2.5 bg-black/40 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-white/60">
                 <div className="flex items-center gap-2">
                   <span>Navigation:</span>
-                  <span className="px-1.5 py-0.5 bg-white/5 rounded border border-white/10">↑↓</span>
+                  <span className="px-1.5 py-0.5 bg-white/10 rounded border border-white/15 text-white/80">↑↓</span>
                   <span>Select:</span>
-                  <span className="px-1.5 py-0.5 bg-white/5 rounded border border-white/10">Enter</span>
+                  <span className="px-1.5 py-0.5 bg-white/10 rounded border border-white/15 text-white/80">Enter</span>
                 </div>
                 <span>ESC to close</span>
               </div>
